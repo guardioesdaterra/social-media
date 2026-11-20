@@ -44,6 +44,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { MANAGER_DOMAIN } from '~/lib/constants'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
+const { authError, signInWithGoogle, bootstrap, phase } = useSupabaseAuth()
 const router = useRouter()
 
 const busy = ref(false)
