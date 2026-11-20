@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
 import type { ManagerUser } from '~/lib/types'
 import { MANAGER_DOMAIN } from '~/lib/constants'
+import { useSupabase } from '~/lib/supabase'
 import { shallowRef, computed, readonly } from 'vue'
 
 export type AuthPhase = 'boot' | 'anonymous' | 'checking' | 'manager' | 'denied'
