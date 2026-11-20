@@ -60,7 +60,7 @@ function main() {
   const functions = ['is-manager', 'calendar-get', 'calendar-save']
   for (const name of functions) {
     console.log(`[deploy-supabase] Deploying edge function: ${name}`)
-    run('functions', ['deploy', name, '--project-ref', projectRef])
+    run('functions', ['deploy', name, '--project-ref', projectRef, '--yes'])
   }
 
   console.log(`[deploy-supabase] Done. Functions deployed to project ${projectRef}.`)
