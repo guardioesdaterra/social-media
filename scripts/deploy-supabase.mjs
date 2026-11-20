@@ -21,11 +21,15 @@ function fail(message) {
   process.exit(1)
 }
 
-function run(cmd, args, { stdio = 'inherit', env = process.env } = {}) {
-  const result = spawnSync(cmd, args, { stdio, env, shell: false })
-  if (result.error) fail(`could not start ${cmd}: ${result.error.message}`)
+const SUPABASE_CMD = 'npx'
+const SUPABASE_ARGS = ['--yes', 'supabase']
+
+function run(subcommand, subargs = [], { stdio = 'inherit', env = process.env } = {}) {
+  const fullArgs = [...SUPABASE_ARGS, subcommand, ...subargs]
+  const result = spawnSync(SUPABASE_CMD, fullArgs, { stdio, env, shell: false })
+  if (result.error) fail(`could not start ${SUPABASE_CMD}: ${result.error.message}`)
   if (result.status !== 0) {
-    fail(`${cmd} ${args.join(' ')} exited with status ${result.status}`)
+    fail(`${SUPABASE_CMD} ${fullArgs.join(' ')} exited with status ${result.status}`)
   }
   return result
 }
@@ -50,13 +54,13 @@ function main() {
 
   // 1) Push schema + seed migrations.
   console.log('[deploy-supabase] Pushing database migrations...')
-  run('supabase', ['db', 'push', '--project-ref', projectRef])
+  run('db', ['push', '--project-ref', projectRef, '--yes'])
 
   // 2) Deploy edge functions.
   const functions = ['is-manager', 'calendar-get', 'calendar-save']
   for (const name of functions) {
     console.log(`[deploy-supabase] Deploying edge function: ${name}`)
-    run('supabase', ['functions', 'deploy', name, '--project-ref', projectRef])
+    run('functions', ['deploy', name, '--project-ref', projectRef])
   }
 
   console.log(`[deploy-supabase] Done. Functions deployed to project ${projectRef}.`)

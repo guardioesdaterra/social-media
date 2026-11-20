@@ -79,7 +79,7 @@ insert into public.calendar_settings (key, value, updated_at) values
   ('default_year', to_jsonb(2026::int), now()),
   ('default_month', to_jsonb(12::int), now()),
   ('week_start', '"sunday"'::jsonb, now()),
-  ('attention_note', 'Topics that need coverage this cycle — reorder with the arrows.'::jsonb, now())
+  ('attention_note', to_jsonb('Topics that need coverage this cycle — reorder with the arrows.'), now())
 on conflict (key) do update set value = excluded.value, updated_at = now();
 
 commit;
