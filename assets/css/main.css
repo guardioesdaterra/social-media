@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --eg-bg: #0a0a0a;
+    --eg-panel: #141414;
+    --eg-panel-2: #1b1b1b;
+    --eg-border: #262626;
+    --eg-accent: #22c55e;
+    --eg-accent-soft: rgba(34, 197, 94, 0.14);
+  }
+
+  html,
+  body,
+  #__nuxt {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-[var(--eg-bg)] text-zinc-200 antialiased;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      'Helvetica Neue',
+      Arial,
+      sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::selection {
+    background: var(--eg-accent-soft);
+    color: #fff;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a2a;
+    border-radius: 8px;
+    border: 2px solid var(--eg-bg);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a3a3a;
+  }
+}
+
+@layer components {
+  .eg-card {
+    @apply rounded-xl border border-[var(--eg-border)] bg-[var(--eg-panel)];
+  }
+
+  .eg-input {
+    @apply w-full rounded-lg border border-[var(--eg-border)] bg-[var(--eg-panel-2)] px-3 py-2 text-sm text-zinc-100
+      outline-none transition placeholder:text-zinc-500 focus:border-[var(--eg-accent)]
+      focus:ring-2 focus:ring-[var(--eg-accent-soft)];
+  }
+
+  .eg-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium
+      transition select-none disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .eg-btn-primary {
+    @apply eg-btn bg-[var(--eg-accent)] text-black hover:brightness-110 active:brightness-95;
+  }
+
+  .eg-btn-ghost {
+    @apply eg-btn border border-[var(--eg-border)] bg-transparent text-zinc-200 hover:bg-white/5;
+  }
+
+  .eg-btn-danger {
+    @apply eg-btn border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20;
+  }
+
+  .eg-label {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-zinc-400;
+  }
+}
