@@ -48,7 +48,7 @@
 
     <!-- Weeks -->
     <div class="grid grid-cols-7">
-      <template v-for="(week, wi) in weeks" :key="wi">
+      <template v-for="(week, wi) in weeksView" :key="wi">
         <button
           v-for="cell in week"
           :key="cell.date"
@@ -144,7 +144,8 @@ const weeks = computed(() => weeksOf(grid.value))
 
 const monthPostCount = computed(() => {
   let n = 0
-  for (const list of props.postsByDay.values()) {
+  const postsByDay = props.postsByDay || new Map<string, CalendarPost[]>()
+  for (const list of postsByDay.values()) {
     for (const p of list) if (p.year === year.value && p.month === month.value) n++
   }
   return n
@@ -173,7 +174,8 @@ interface CellView {
 
 const cellsView = computed<CellView[]>(() =>
   grid.value.cells.map((c) => {
-    const list = props.postsByDay.get(c.date) || []
+    const postsByDay = props.postsByDay || new Map<string, CalendarPost[]>()
+    const list = postsByDay.get(c.date) || []
     return {
       ...c,
       count: list.length,
@@ -184,17 +186,12 @@ const cellsView = computed<CellView[]>(() =>
   }),
 )
 
-// Expose the computed cells through `weeks` by rebuilding them there.
 const weeksView = computed(() => {
   const all = cellsView.value
   const out: CellView[][] = []
   for (let i = 0; i < all.length; i += 7) out.push(all.slice(i, i + 7))
   return out
 })
-
-// Rebind: template uses `weeks`, so alias the view model.
-const weeksFinal = weeksView
-void weeksFinal
 
 const today = todayIso()
 
