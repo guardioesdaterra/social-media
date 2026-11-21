@@ -7,6 +7,7 @@ import type {
   Topic,
 } from '~/lib/types'
 import { useSupabase, edgeFunctionUrl } from '~/lib/supabase'
+import { isMock, useMockCalendar } from '~/lib/mock'
 import { ref, computed, watch, readonly } from 'vue'
 
 /**
@@ -33,6 +34,8 @@ let snapshotInFlight = false
 
 export function useCalendar() {
   const supabase = useSupabase()
+  const mock = isMock()
+  const mCalendar = useMockCalendar()
   const toast = useToast()
   const { session } = useSupabaseAuth()
 
@@ -101,7 +104,7 @@ export function useCalendar() {
       },
     })
     const text = await res.text()
-    let data: unknown = null
+    let data: unknown
     try {
       data = text ? JSON.parse(text) : null
     } catch {
@@ -122,6 +125,16 @@ export function useCalendar() {
     loading.value = true
     loadError.value = null
     try {
+      if (mock) {
+        const snap = mCalendar.load()
+        topics.value = snap.topics
+        posts.value = sortPosts(snap.posts)
+        settings.value = Object.fromEntries((snap.settings || []).map((s) => [s.key, s.value]))
+        version.value = snap.version || 0
+        loaded.value = true
+        lastSync.value = new Date(snap.server_time || Date.now())
+        return
+      }
       const snap = await fn<CalendarSnapshot>('calendar-get', { method: 'GET' })
       topics.value = snap.topics || []
       posts.value = sortPosts(snap.posts || [])
@@ -161,6 +174,29 @@ export function useCalendar() {
   async function save(action: SaveAction): Promise<SaveResult> {
     saving.value = true
     try {
+      if (mock) {
+        const result = mCalendar.save(action)
+        version.value = result.version
+        lastSync.value = new Date()
+
+        if (result.post) replacePost(result.post)
+        if (result.posts) for (const p of result.posts) replacePost(p)
+        if (result.topic) replaceTopic(result.topic)
+        if (result.topics) {
+          for (const t of result.topics) {
+            const i = topics.value.findIndex((x) => x.key === t.key)
+            if (i >= 0) topics.value.splice(i, 1, t)
+            else topics.value.push(t)
+          }
+          topics.value = [...topics.value].sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label))
+        }
+        if (result.settings) for (const s of result.settings) settings.value[s.key] = s.value
+
+        if (action.action === 'delete_post') posts.value = posts.value.filter((p) => p.id !== action.id)
+        if (action.action === 'delete_topic') topics.value = topics.value.filter((t) => t.key !== action.key)
+
+        return result
+      }
       const result = await fn<SaveResult>('calendar-save', {
         method: 'POST',
         body: JSON.stringify(action),
@@ -203,7 +239,7 @@ export function useCalendar() {
 
   /** Subscribes to the calendar tables so every open tab stays live. */
   function connectRealtime(): () => void {
-    if (!import.meta.client || channel) return () => {}
+    if (mock || !import.meta.client || channel) return () => {}
 
     channel = supabase
       .channel(`calendar-sync-${Date.now()}`)
@@ -260,7 +296,7 @@ export function useCalendar() {
     await auth.bootstrap()
     if (!auth.isManager.value) return
     await load(true)
-    connectRealtime()
+    if (!mock) connectRealtime()
   }
 
   return {

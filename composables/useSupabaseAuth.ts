@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js'
 import type { ManagerUser } from '~/lib/types'
 import { MANAGER_DOMAIN } from '~/lib/constants'
 import { useSupabase, edgeFunctionUrl } from '~/lib/supabase'
+import { isMock, MOCK_MANAGER } from '~/lib/mock'
 import { shallowRef, computed, readonly } from 'vue'
 
 export type AuthPhase = 'boot' | 'anonymous' | 'checking' | 'manager' | 'denied'
@@ -21,6 +22,7 @@ let initialized = false
  */
 export function useSupabaseAuth() {
   const supabase = useSupabase()
+  const mock = isMock()
 
   async function evaluateGate(): Promise<void> {
     phase.value = 'checking'
@@ -30,6 +32,12 @@ export function useSupabaseAuth() {
     if (!token) {
       phase.value = 'anonymous'
       manager.value = null
+      return
+    }
+
+    if (mock) {
+      manager.value = { ...MOCK_MANAGER }
+      phase.value = 'manager'
       return
     }
 
@@ -81,6 +89,7 @@ export function useSupabaseAuth() {
   }
 
   function subscribe() {
+    if (mock) return
     supabase.auth.onAuthStateChange((_event, s) => {
       session.value = s
       if (!s) {
@@ -103,6 +112,19 @@ export function useSupabaseAuth() {
     }
 
     subscribe()
+
+    if (mock) {
+      session.value = {
+        access_token: 'mock-token',
+        user: {
+          email: MOCK_MANAGER.email,
+          user_metadata: { full_name: MOCK_MANAGER.name, avatar_url: MOCK_MANAGER.avatar },
+        } as any,
+      } as Session
+      manager.value = { ...MOCK_MANAGER }
+      phase.value = 'manager'
+      return
+    }
 
     try {
       const { data, error } = await supabase.auth.getSession()
@@ -127,6 +149,11 @@ export function useSupabaseAuth() {
 
   async function signInWithGoogle(): Promise<string | null> {
     authError.value = null
+    if (mock) {
+      manager.value = { ...MOCK_MANAGER }
+      phase.value = 'manager'
+      return null
+    }
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -164,6 +191,12 @@ export function useSupabaseAuth() {
   }
 
   async function signOut(): Promise<void> {
+    if (mock) {
+      session.value = null
+      manager.value = null
+      phase.value = 'anonymous'
+      return
+    }
     try {
       await supabase.auth.signOut({ scope: 'local' })
     } finally {

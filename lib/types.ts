@@ -42,6 +42,8 @@ export interface CalendarPost {
   id: string
   /** `YYYY-MM-DD` */
   day: string
+  /** Optional scheduled time `HH:mm` or full ISO datetime. */
+  scheduled_at?: string | null
   /** Derived from `day` (stored). */
   year: number
   /** 1..12, derived from `day` (stored). */
@@ -121,6 +123,7 @@ export interface SiteUpdateDraft {
 export interface PostDraft {
   id?: string
   day: string
+  scheduled_at?: string | null
   topic_key: string
   format?: PostFormat
   title?: string
@@ -236,3 +239,103 @@ export const MONTHS_SHORT: readonly string[] = [
 export function statusLabel(s: PostStatus): string {
   return STATUSES.find((x) => x.value === s)?.label ?? s
 }
+
+/* ------------------------------------------------------------------ */
+/* Unified calendar item (posts + newsletters + site updates)         */
+/* ------------------------------------------------------------------ */
+
+export type CalendarItemKind = 'post' | 'newsletter' | 'site_update'
+
+/** Highlight color per calendar-item kind. */
+export const ITEM_KIND_COLORS: Record<CalendarItemKind, string> = {
+  post: '#71717a',
+  newsletter: '#3b82f6',
+  site_update: '#a855f7',
+}
+
+export function itemKindColor(kind: CalendarItemKind): string {
+  return ITEM_KIND_COLORS[kind] ?? '#71717a'
+}
+
+export function itemKindLabel(kind: CalendarItemKind): string {
+  const map: Record<CalendarItemKind, string> = {
+    post: 'Post',
+    newsletter: 'Newsletter',
+    site_update: 'Site update',
+  }
+  return map[kind]
+}
+
+/** Base fields shared by every calendar item. */
+export interface CalendarItemBase {
+  kind: CalendarItemKind
+  id: string
+  /** `YYYY-MM-DD` local date derived from the scheduled time. */
+  day: string
+  title: string
+  /** Optional `HH:mm` or ISO time string for display. */
+  time?: string | null
+  status?: string | null
+  color: string
+}
+
+export interface CalendarItemPost extends CalendarItemBase {
+  kind: 'post'
+  post: CalendarPost
+}
+
+export interface CalendarItemNewsletter extends CalendarItemBase {
+  kind: 'newsletter'
+  newsletter: Newsletter
+}
+
+export interface CalendarItemSiteUpdate extends CalendarItemBase {
+  kind: 'site_update'
+  site_update: SiteUpdate
+}
+
+export type CalendarItem =
+  | CalendarItemPost
+  | CalendarItemNewsletter
+  | CalendarItemSiteUpdate
+
+/** Build a calendar item from any of the three domain rows. */
+export function makeCalendarItem(row: CalendarPost | Newsletter | SiteUpdate, kind: CalendarItemKind): CalendarItem {
+  const base: CalendarItemBase = {
+    kind,
+    id: row.id,
+    /** `YYYY-MM-DD` local date derived from the scheduled time. */
+    day: kind === 'post'
+      ? (row as CalendarPost).day
+      : kind === 'newsletter'
+        ? String((row as Newsletter).scheduled_at ?? '').slice(0, 10)
+        : String((row as SiteUpdate).published_at ?? '').slice(0, 10),
+    title: kind === 'post'
+      ? (row as CalendarPost).title
+      : kind === 'newsletter'
+        ? (row as Newsletter).title
+        : (row as SiteUpdate).title,
+    /** Optional `HH:mm` or ISO time string for display. */
+    time: kind === 'post'
+      ? (row as CalendarPost).scheduled_at ?? null
+      : kind === 'newsletter'
+        ? (row as Newsletter).scheduled_at ?? null
+        : (row as SiteUpdate).published_at ?? null,
+    status: kind === 'post'
+      ? (row as CalendarPost).status
+      : kind === 'newsletter'
+        ? (row as Newsletter).status
+        : (row as SiteUpdate).status,
+    color: itemKindColor(kind),
+  }
+
+  switch (kind) {
+    case 'post':
+      return { ...base, kind: 'post', post: row as CalendarPost }
+    case 'newsletter':
+      return { ...base, kind: 'newsletter', newsletter: row as Newsletter }
+    case 'site_update':
+      return { ...base, kind: 'site_update', site_update: row as SiteUpdate }
+  }
+}
+

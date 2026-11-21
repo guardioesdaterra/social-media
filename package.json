@@ -13,7 +13,8 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "nuxi prepare && vue-tsc --noEmit",
     "supabase:deploy": "node scripts/deploy-supabase.mjs",
-    "supabase:seed": "node scripts/seed-calendar.mjs"
+    "supabase:seed": "node scripts/seed-calendar.mjs",
+    "dev:mock": "NUXT_PUBLIC_MOCK=1 nuxt dev"
   },
   "dependencies": {
     "@nuxtjs/tailwindcss": "^6.14.0",

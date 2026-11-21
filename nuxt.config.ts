@@ -47,6 +47,7 @@ export default defineNuxtConfig({
     public: {
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || '',
       supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_KEY || '',
+      mock: process.env.NUXT_PUBLIC_MOCK === '1',
     },
   },
 

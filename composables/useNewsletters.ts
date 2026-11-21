@@ -70,7 +70,7 @@ export function useNewsletters() {
       },
     })
     const text = await res.text()
-    let data: unknown = null
+    let data: unknown
     try {
       data = text ? JSON.parse(text) : null
     } catch {

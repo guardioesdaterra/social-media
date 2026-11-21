@@ -56,11 +56,15 @@
 import type { ContextMenuEntry } from '~/composables/useContextMenu'
 
 const { phase, manager, isManager, signOut } = useSupabaseAuth()
+const { now, timezone, isUtc, formatted, tzLabel, setTimezone } = useAppClock()
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 const ctx = useContextMenu()
 const { copyText } = useCopyText()
+
+/** Timezone options offered in the header context menu. */
+const TIMEZONES: string[] = ['UTC', 'America/Sao_Paulo', 'America/London', 'America/New_York', 'Asia/Tokyo', 'Australia/Sydney']
 
 async function onSignOut() {
   await signOut()
@@ -76,7 +80,20 @@ function onHeaderContext(e: MouseEvent) {
     { label: 'Site updates', hint: '/site-updates', onSelect: () => void router.push('/site-updates') },
     { type: 'separator' },
     { label: 'Copy page URL', onSelect: () => void copyText(window.location.href, 'URL copied.') },
+    { type: 'separator' },
+    { label: 'Clock / Timezone', hint: tzLabel.value, disabled: true },
   ]
+
+  for (const tz of TIMEZONES) {
+    items.push({
+      label: tz,
+      hint: tz === 'UTC' ? 'Coordinated Universal Time' : '',
+      disabled: tz === timezone.value,
+      onSelect: () => setTimezone(tz),
+    })
+  }
+
+  items.push({ type: 'separator' })
 
   if (isManager.value) {
     items.push({ label: 'Refresh data', hint: 'Supabase', onSelect: refreshData })
