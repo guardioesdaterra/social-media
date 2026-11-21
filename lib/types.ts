@@ -7,6 +7,10 @@ export type PostFormat = 'Carousel' | 'Photo' | 'Reel' | 'Story' | 'Video'
 
 export type PostStatus = 'planned' | 'production' | 'approved' | 'published'
 
+export type NewsletterStatus = 'draft' | 'scheduled' | 'sent'
+
+export type SiteUpdateStatus = 'draft' | 'published' | 'archived'
+
 export const FORMATS: readonly PostFormat[] = ['Carousel', 'Photo', 'Reel', 'Story', 'Video'] as const
 
 export const STATUSES: { value: PostStatus; label: string; color: string }[] = [
@@ -63,7 +67,57 @@ export interface CalendarPost {
   updated_by: string | null
 }
 
-/** Draft accepted by the `upsert_post` action. */
+/** A scheduled email newsletter. */
+export interface Newsletter {
+  id: string
+  title: string
+  subject: string
+  body: string
+  status: NewsletterStatus
+  scheduled_at: string | null
+  sent_at: string | null
+  recipient_list: string
+  created_at?: string
+  updated_at: string
+  updated_by: string | null
+}
+
+/** Draft accepted by the `upsert_newsletter` action. */
+export interface NewsletterDraft {
+  id?: string
+  title: string
+  subject: string
+  body: string
+  status?: NewsletterStatus
+  scheduled_at?: string | null
+  sent_at?: string | null
+  recipient_list?: string
+}
+
+/** A website page update. */
+export interface SiteUpdate {
+  id: string
+  title: string
+  slug: string
+  content: string
+  status: SiteUpdateStatus
+  published_at: string | null
+  url: string | null
+  created_at?: string
+  updated_at: string
+  updated_by: string | null
+}
+
+/** Draft accepted by the `upsert_site_update` action. */
+export interface SiteUpdateDraft {
+  id?: string
+  title: string
+  slug: string
+  content: string
+  status?: SiteUpdateStatus
+  published_at?: string | null
+  url?: string | null
+}
 export interface PostDraft {
   id?: string
   day: string
@@ -111,6 +165,10 @@ export type SaveAction =
   | { action: 'reorder_topics'; items: { key: string; sort: number }[] }
   | { action: 'set_attention'; items: { key: string; attention_rank: number | null }[] }
   | { action: 'upsert_setting'; key: string; value: unknown }
+  | { action: 'upsert_newsletter'; newsletter: NewsletterDraft }
+  | { action: 'delete_newsletter'; id: string }
+  | { action: 'upsert_site_update'; site_update: SiteUpdateDraft }
+  | { action: 'delete_site_update'; id: string }
 
 export type SaveActionName = SaveAction['action']
 
@@ -122,6 +180,8 @@ export interface SaveResult {
   topic?: Topic
   topics?: Topic[]
   settings?: CalendarSetting[]
+  newsletter?: Newsletter
+  site_update?: SiteUpdate
   version: number
   error?: string
 }

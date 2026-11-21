@@ -57,7 +57,15 @@ function main() {
   run('db', ['push', '--project-ref', projectRef, '--yes'])
 
   // 2) Deploy edge functions.
-  const functions = ['is-manager', 'calendar-get', 'calendar-save']
+  const functions = [
+    'is-manager',
+    'calendar-get',
+    'calendar-save',
+    'newsletter-get',
+    'newsletter-save',
+    'site-update-get',
+    'site-update-save',
+  ]
   for (const name of functions) {
     console.log(`[deploy-supabase] Deploying edge function: ${name}`)
     run('functions', ['deploy', name, '--project-ref', projectRef, '--yes'])

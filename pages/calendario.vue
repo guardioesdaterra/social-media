@@ -56,6 +56,22 @@
             + New post
           </button>
 
+          <NuxtLink
+            to="/newsletters"
+            class="eg-btn-ghost !px-2.5 !py-1.5 text-xs shrink-0"
+            :class="{ 'bg-white/10': $route.path.startsWith('/newsletters') }"
+          >
+            Newsletters
+          </NuxtLink>
+
+          <NuxtLink
+            to="/site-updates"
+            class="eg-btn-ghost !px-2.5 !py-1.5 text-xs shrink-0"
+            :class="{ 'bg-white/10': $route.path.startsWith('/site-updates') }"
+          >
+            Site updates
+          </NuxtLink>
+
           <button
             class="eg-btn-ghost !px-2.5 !py-1.5 text-xs shrink-0"
             :class="{ 'bg-white/10': panelMode === 'topics' }"

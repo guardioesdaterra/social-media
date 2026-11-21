@@ -16,11 +16,17 @@ supabase/
   migrations/
     20261120000001_social_calendar.sql   # topics, posts, settings, RLS, realtime
     20261120000002_seed_calendar_2026_12.sql   # Dec 2026 plan (31 posts, 10 topics)
+    20261121000003_newsletters.sql       # newsletters table + RLS + realtime
+    20261121000004_site_updates.sql      # site_updates table + RLS + realtime
   functions/
     _shared/auth.ts, cors.ts
     is-manager/index.ts      # gate: only @earthguardians.org
-    calendar-get/index.ts    # full snapshot read
-    calendar-save/index.ts   # all writes (upsert/delete/reorder/attention)
+    calendar-get/index.ts    # full snapshot read (posts)
+    calendar-save/index.ts   # all writes (posts)
+    newsletter-get/index.ts  # read all newsletters
+    newsletter-save/index.ts # write newsletters (upsert/delete)
+    site-update-get/index.ts # read all site updates
+    site-update-save/index.ts# write site updates (upsert/delete)
 scripts/
   deploy-supabase.mjs        # db push + functions deploy
   make-seed.mjs              # regenerates the Dec 2026 seed SQL
@@ -31,8 +37,10 @@ scripts/
 - `calendar_topics` — topic key, label, color, emoji, sort, `needs_attention` + `attention_rank` (#1, #2, … priority list).
 - `calendar_posts` — one row per post; **multiple posts per day allowed** (`day`, `sort_order`). `year`/`month`/`dow` are generated from `day`. `topic_key` is **required** (every post linked to a topic). `image_base64` stores the image in Postgres (capped 4 MiB).
 - `calendar_settings` — version counter + app settings.
-- RLS: reads only for authenticated `@earthguardians.org` emails; all writes go through `calendar-save` (service role) after the manager gate.
-- Realtime: `calendar_posts` and `calendar_topics` added to `supabase_realtime` — every open tab syncs live.
+- `newsletters` — email newsletters: `title`, `subject`, HTML `body`, `status` (draft/scheduled/sent), `scheduled_at`, `sent_at`, `recipient_list`.
+- `site_updates` — website page updates: `title`, `slug`, HTML `content`, `status` (draft/published/archived), `published_at`, `url`.
+- RLS: reads only for authenticated `@earthguardians.org` emails; all writes go through the edge functions (service role) after the manager gate.
+- Realtime: `calendar_posts`, `calendar_topics`, `newsletters` and `site_updates` added to `supabase_realtime` — every open tab syncs live.
 
 ## Local development
 ```bash
@@ -76,3 +84,6 @@ Only accounts ending in `@earthguardians.org` pass the `is-manager` gate and can
 - Full-quality image upload/download (base64 in Postgres, no S3).
 - Realtime sync across open browsers.
 - Manager gate via Google OAuth + `@earthguardians.org` domain check.
+- **Newsletters**: create/schedule/send email newsletters with subject, HTML body, recipient list and delivery status.
+- **Site updates**: create/publish/archive website page updates with title, slug, HTML content and publish date.
+- All content types (posts, newsletters, site updates) share the same manager gate, RLS and realtime sync across every environment (local dev, staging, production).
