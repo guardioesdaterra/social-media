@@ -34,3 +34,10 @@ export function useSupabase(): SupabaseClient {
 
   return client
 }
+
+/** Full URL for a Supabase Edge Function (cross-origin from GitHub Pages). */
+export function edgeFunctionUrl(path: string): string {
+  const cfg = useRuntimeConfig().public
+  const url = String(cfg.supabaseUrl || '').trim()
+  return `${url.replace(/\/+$/, '')}/functions/v1/${path.replace(/^\/+/, '')}`
+}

@@ -39,7 +39,7 @@ function headers(req: Request): Record<string, string> {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': allow,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info, origin',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   }

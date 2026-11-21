@@ -6,7 +6,7 @@ import type {
   SaveResult,
   Topic,
 } from '~/lib/types'
-import { useSupabase } from '~/lib/supabase'
+import { useSupabase, edgeFunctionUrl } from '~/lib/supabase'
 import { ref, computed, watch, readonly } from 'vue'
 
 /**
@@ -92,7 +92,7 @@ export function useCalendar() {
   }
 
   async function fn<T>(path: string, init: RequestInit): Promise<T> {
-    const res = await fetch(`/functions/v1/${path}`, {
+    const res = await fetch(edgeFunctionUrl(path), {
       ...init,
       headers: {
         Origin: window.location.origin,
