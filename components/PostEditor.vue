@@ -6,7 +6,7 @@
       <div class="relative w-full max-w-lg bg-[var(--eg-panel)] border border-[var(--eg-border)] rounded-xl shadow-2xl flex flex-col">
         <div class="flex items-center justify-between gap-3 border-b border-[var(--eg-border)] px-4 py-3">
           <h2 class="text-sm font-semibold text-white">
-            {{ editorPost ? 'Edit post' : 'New post' }}
+            {{ post ? 'Edit post' : 'New post' }}
           </h2>
           <button class="eg-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white" @click="close">
             ✕
@@ -21,7 +21,7 @@
               type="date"
               class="eg-input text-sm"
               :value="form.day"
-              @input="form.day = $event.target.value"
+              @input="form.day = ($event.target as HTMLInputElement).value"
               required
             />
           </div>
@@ -32,7 +32,7 @@
             <select
               class="eg-input text-sm"
               :value="form.topic_key"
-              @change="form.topic_key = $event.target.value"
+              @change="form.topic_key = ($event.target as HTMLSelectElement).value"
               required
             >
               <option disabled value="">Select a topic</option>
@@ -65,7 +65,7 @@
               type="text"
               class="eg-input text-sm"
               :value="form.title"
-              @input="form.title = $event.target.value"
+              @input="form.title = ($event.target as HTMLInputElement).value"
               maxlength="300"
               placeholder="e.g. Giving Tuesday — matched donation"
             />
@@ -78,7 +78,7 @@
               class="eg-input text-sm"
               rows="4"
               :value="form.caption"
-              @input="form.caption = $event.target.value"
+              @input="form.caption = ($event.target as HTMLTextAreaElement).value"
               maxlength="10000"
               placeholder="Greetings EG Family! ..."
             ></textarea>
@@ -92,7 +92,7 @@
               type="text"
               class="eg-input text-sm"
               :value="form.hashtags"
-              @input="form.hashtags = $event.target.value"
+              @input="form.hashtags = ($event.target as HTMLInputElement).value"
               placeholder="#EarthGuardians #ClimateAction"
             />
             <p class="mt-1 text-[10px] text-zinc-600">Space-separated.</p>
@@ -139,12 +139,12 @@ import type { CalendarPost, PostFormat, PostStatus, Topic } from '~/lib/types'
 import { FORMATS, STATUSES } from '~/lib/types'
 import { formatBytes, downloadDataUrl, slugify } from '~/lib/image'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 
 const props = defineProps<{
   open: boolean
   post: CalendarPost | null
-  topics: Topic[]
+  topics: readonly Topic[]
   day: string
 }>()
 
@@ -179,6 +179,8 @@ const form = reactive<{
   hashtags: '',
   image_base64: null,
 })
+
+const saving = ref(false)
 
 let imagePreview: string | null = null
 let imageBytes = 0
@@ -261,8 +263,10 @@ async function handleSubmit() {
     draft.image_base64 = null
   }
 
+  saving.value = true
   emit('save', draft)
   close()
+  saving.value = false
 }
 
 async function handleDelete() {

@@ -26,7 +26,7 @@
               type="text"
               class="eg-input text-sm"
               :value="form.title"
-              @input="form.title = $event.target.value"
+              @input="form.title = ($event.target as HTMLInputElement).value"
               maxlength="200"
               placeholder="e.g. December 2026 — Year in Review"
               required
@@ -42,7 +42,7 @@
               type="text"
               class="eg-input text-sm"
               :value="form.subject"
-              @input="form.subject = $event.target.value"
+              @input="form.subject = ($event.target as HTMLInputElement).value"
               maxlength="200"
               placeholder="e.g. Our year in review + what's next"
               required
@@ -70,7 +70,7 @@
               type="datetime-local"
               class="eg-input text-sm"
               :value="form.scheduled_at"
-              @input="form.scheduled_at = $event.target.value"
+              @input="form.scheduled_at = ($event.target as HTMLInputElement).value"
             />
           </div>
 
@@ -83,7 +83,7 @@
               type="text"
               class="eg-input text-sm"
               :value="form.recipient_list"
-              @input="form.recipient_list = $event.target.value"
+              @input="form.recipient_list = ($event.target as HTMLInputElement).value"
               placeholder="newsletter@earthguardians.org, updates@earthguardians.org"
             />
             <p class="mt-1 text-[10px] text-zinc-500">Leave blank to use the default mailing list.</p>
@@ -98,7 +98,7 @@
               class="eg-input text-sm font-mono"
               rows="12"
               :value="form.body"
-              @input="form.body = $event.target.value"
+              @input="form.body = ($event.target as HTMLTextAreaElement).value"
               placeholder="<p>Greetings EG Family!</p>..."
               required
             ></textarea>

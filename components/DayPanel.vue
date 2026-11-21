@@ -1,8 +1,8 @@
 <template>
-  <div class="space-y-3">
+  <div class="space-y-3" @contextmenu.prevent="onPanelContext">
     <div class="flex items-center justify-between gap-2">
       <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-        {{ dayLabel }} <span class="ml-1 text-[11px] font-normal text-zinc-600">{{ postCount }} post{{ postCount === 1 ? '' : 's' }}</span>
+        {{ dayTitle }} <span class="ml-1 text-[11px] font-normal text-zinc-600">{{ postCount }} post{{ postCount === 1 ? '' : 's' }}</span>
       </h2>
       <button
         v-if="canEdit"
@@ -30,6 +30,7 @@
         v-for="p in posts"
         :key="p.id"
         class="eg-card p-3 relative group"
+        @contextmenu.stop.prevent="onPostContext($event, p)"
       >
         <div class="flex items-start gap-2">
           <span
@@ -56,7 +57,7 @@
               <span class="ml-auto text-[10px] text-zinc-500 truncate max-w-[30%]">{{ p.sort_order }}</span>
             </div>
 
-            <h3 class="text-sm font-semibold text-white truncate" title="{{ p.title }}">{{ p.title || '(no title)' }}</h3>
+            <h3 class="text-sm font-semibold text-white truncate" :title="p.title">{{ p.title || '(no title)' }}</h3>
 
             <p v-if="p.caption" class="mt-1 text-xs text-zinc-400 line-clamp-2">{{ p.caption }}</p>
 
@@ -115,6 +116,7 @@
 
 <script setup lang="ts">
 import type { CalendarPost, Topic } from '~/lib/types'
+import type { ContextMenuEntry } from '~/composables/useContextMenu'
 import { dayLabel } from '~/lib/calendar'
 import { statusLabel } from '~/lib/types'
 import { computed } from 'vue'
@@ -123,7 +125,7 @@ import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
 const props = defineProps<{
   day: string
   posts: CalendarPost[]
-  topics: Topic[]
+  topics: readonly Topic[]
 }>()
 
 const emit = defineEmits<{
@@ -136,6 +138,10 @@ const emit = defineEmits<{
 const { phase } = useSupabaseAuth()
 const canEdit = computed(() => phase.value === 'manager')
 
+const ctx = useContextMenu()
+const { copyText } = useCopyText()
+
+const dayTitle = computed(() => dayLabel(props.day))
 const postCount = computed(() => props.posts.length)
 
 const topicMap = computed(() => {
@@ -179,6 +185,42 @@ async function confirmDelete(id: string) {
   if (window.confirm('Delete this post?')) {
     emit('delete', id)
   }
+}
+
+/** Right-click on the panel background → day-level actions. */
+function onPanelContext(e: MouseEvent) {
+  const items: ContextMenuEntry[] = []
+  if (canEdit.value) {
+    items.push({ label: 'Add post to this day', onSelect: () => emit('add') })
+    items.push({ type: 'separator' })
+  }
+  items.push(
+    { label: 'Copy date', onSelect: () => void copyText(dayLabel(props.day), 'Date copied.') },
+    { label: 'Copy ISO date', hint: props.day, onSelect: () => void copyText(props.day, 'Date copied.') },
+  )
+  ctx.openFromEvent(e, items)
+}
+
+/** Right-click on a post card → post-level actions. */
+function onPostContext(e: MouseEvent, p: CalendarPost) {
+  const items: ContextMenuEntry[] = [
+    { label: 'Edit post', onSelect: () => emit('edit', p) },
+    { label: 'Copy title', onSelect: () => void copyText(p.title || 'Untitled', 'Title copied.') },
+  ]
+  if (p.caption) {
+    items.push({ label: 'Copy caption', onSelect: () => void copyText(p.caption, 'Caption copied.') })
+  }
+  if (p.hashtags) {
+    items.push({ label: 'Copy hashtags', onSelect: () => void copyText(p.hashtags, 'Hashtags copied.') })
+  }
+  items.push(
+    { type: 'separator' },
+    { label: 'Copy post date', hint: p.day, onSelect: () => void copyText(p.day, 'Date copied.') },
+  )
+  if (canEdit.value) {
+    items.push({ type: 'separator' }, { label: 'Delete post', danger: true, onSelect: () => confirmDelete(p.id) })
+  }
+  ctx.openFromEvent(e, items)
 }
 
 async function removeImage(id: string) {

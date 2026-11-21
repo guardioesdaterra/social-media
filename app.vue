@@ -3,6 +3,7 @@
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+    <ContextMenuHost />
     <ToastHost />
   </div>
 </template>

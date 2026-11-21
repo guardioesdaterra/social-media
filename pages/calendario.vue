@@ -1,6 +1,6 @@
 <template>
   <AuthGate>
-    <div class="flex flex-col h-full">
+    <div class="flex min-h-0 flex-1 flex-col">
       <!-- Toolbar -->
       <header class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--eg-border)] px-3 py-2.5 sm:px-4 bg-black/60 backdrop-blur sticky top-0 z-20">
         <div class="flex items-center gap-2 shrink-0">
@@ -87,11 +87,34 @@
       </header>
 
       <!-- Body -->
-      <div class="flex-1 overflow-hidden relative">
+      <div class="flex flex-1 overflow-hidden relative">
         <div
-          class="absolute inset-0 overflow-y-auto p-3 sm:p-4"
+          class="min-w-0 flex-1 overflow-y-auto p-3 sm:p-4"
           :class="{ 'px-6': isDesktop }"
         >
+          <!-- Async status: the day grid renders immediately from date math;
+               this only reports the Supabase snapshot state. -->
+          <div
+            v-if="loadError"
+            class="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2"
+          >
+            <p class="text-sm text-red-300">Could not load the calendar: {{ loadError }}</p>
+            <button class="eg-btn-ghost !px-2.5 !py-1 text-xs text-red-200" @click="load(true)">
+              Retry
+            </button>
+          </div>
+          <div
+            v-else-if="loading"
+            class="mb-3 flex items-center gap-2 text-xs text-zinc-500"
+            role="status"
+          >
+            <span
+              class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--eg-accent)] border-t-transparent"
+              aria-hidden="true"
+            />
+            Syncing calendar from Supabase…
+          </div>
+
           <CalendarMonth
             v-if="view === 'month'"
             :cursor="cursor"
@@ -99,6 +122,10 @@
             :posts-by-day="byDay"
             :topics="topics"
             @select="setCursor"
+            @cursor="onChildCursor"
+            @new-post="onNewPost"
+            @edit-post="openEditor"
+            @view-week="onViewWeek"
           />
           <CalendarWeek
             v-else
@@ -107,11 +134,14 @@
             :topics="topics"
             :selected="cursor"
             @select="setCursor"
+            @edit="openEditor"
+            @new-post="onNewPost"
+            @view-month="onViewMonth"
           />
         </div>
 
         <!-- Desktop side panel -->
-        <aside v-if="isDesktop" class="hidden lg:flex lg:w-[360px] flex-col border-l border-[var(--eg-border)]">
+        <aside v-if="isDesktop" class="hidden lg:flex lg:w-[360px] shrink-0 flex-col border-l border-[var(--eg-border)]">
           <div class="flex-1 overflow-y-auto p-4">
             <TopicsPanel
               v-if="panelMode === 'topics'"
@@ -194,15 +224,14 @@
       @delete="deletePost"
       @cancel="editorOpen = false"
     />
-
-    <ToastHost />
   </AuthGate>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useWindowSize } from '@vueuse/core'
-import { parseIsoDay, todayIso, weekOf, monthLabel, dayLabel } from '~/lib/calendar'
+import { parseIsoDay, todayIso, weekOf, monthLabel, dayLabel, daysInMonth } from '~/lib/calendar'
+import type { CalendarPost } from '~/lib/types'
 
 import AuthGate from '~/components/AuthGate.vue'
 import CalendarMonth from '~/components/CalendarMonth.vue'
@@ -210,9 +239,9 @@ import CalendarWeek from '~/components/CalendarWeek.vue'
 import DayPanel from '~/components/DayPanel.vue'
 import TopicsPanel from '~/components/TopicsPanel.vue'
 import PostEditor from '~/components/PostEditor.vue'
-import ToastHost from '~/components/ToastHost.vue'
 
-const { isDesktop } = useWindowSize({ width: 1024 })
+const { width } = useWindowSize()
+const isDesktop = computed(() => width.value >= 1024)
 
 const calendar = useCalendar()
 const auth = useSupabaseAuth()
@@ -225,6 +254,7 @@ const {
   version,
   loading,
   saving,
+  loadError,
   byDay,
   topicByKey,
   stats,
@@ -260,6 +290,34 @@ function setCursor(day: string) {
   if (!isDesktop.value) showSheet.value = true
 }
 
+/** Child toolbar navigated months — keep the parent cursor in sync. */
+function onChildCursor(iso: string) {
+  cursor.value = iso
+}
+
+/** "New post on this day" from a day context menu. */
+function onNewPost(day: string) {
+  cursor.value = day
+  openEditor()
+}
+
+/** Switch views from a day context menu. */
+function onViewWeek(day: string) {
+  cursor.value = day
+  view.value = 'week'
+}
+
+function onViewMonth(day: string) {
+  cursor.value = day
+  view.value = 'month'
+}
+
+async function onSignOut() {
+  await auth.signOut()
+  toast.info('Signed out.')
+  await navigateTo('/login')
+}
+
 function closeSheet() {
   showSheet.value = false
 }
@@ -275,7 +333,7 @@ function shift(delta: number) {
   let y = p.year
   while (m < 1) { m += 12; y -= 1 }
   while (m > 12) { m -= 12; y += 1 }
-  const d = Math.min(p.day, 28)
+  const d = Math.min(p.day, daysInMonth(y, m))
   cursor.value = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
 
@@ -286,8 +344,10 @@ function goToday() {
 
 function navDisabled(delta: number): boolean {
   const p = parseIsoDay(cursor.value)
-  const y = p.year + (delta > 0 ? 1 : delta < 0 ? -1 : 0)
-  const m = p.month + delta
+  let m = p.month + delta
+  let y = p.year
+  while (m < 1) { m += 12; y -= 1 }
+  while (m > 12) { m -= 12; y += 1 }
   const lo = new Date().getFullYear() - 2
   const hi = lo + 8
   return y < lo || y > hi

@@ -1,6 +1,7 @@
 <template>
   <header
     class="sticky top-0 z-50 border-b border-[var(--eg-border)] bg-black/80 backdrop-blur-xl"
+    @contextmenu.prevent="onHeaderContext"
   >
     <div class="mx-auto flex h-14 max-w-[1680px] items-center gap-3 px-3 sm:px-5">
       <NuxtLink to="/calendario" class="flex items-center gap-2.5 shrink-0" aria-label="Home">
@@ -52,13 +53,59 @@
 </template>
 
 <script setup lang="ts">
+import type { ContextMenuEntry } from '~/composables/useContextMenu'
+
 const { phase, manager, isManager, signOut } = useSupabaseAuth()
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
+const ctx = useContextMenu()
+const { copyText } = useCopyText()
 
 async function onSignOut() {
   await signOut()
   toast.info('Signed out.')
   await router.push('/login')
+}
+
+/** Right-click on the header → app-wide shortcuts. */
+function onHeaderContext(e: MouseEvent) {
+  const items: ContextMenuEntry[] = [
+    { label: 'Open calendar', hint: '/calendario', onSelect: () => void router.push('/calendario') },
+    { label: 'Newsletters', hint: '/newsletters', onSelect: () => void router.push('/newsletters') },
+    { label: 'Site updates', hint: '/site-updates', onSelect: () => void router.push('/site-updates') },
+    { type: 'separator' },
+    { label: 'Copy page URL', onSelect: () => void copyText(window.location.href, 'URL copied.') },
+  ]
+
+  if (isManager.value) {
+    items.push({ label: 'Refresh data', hint: 'Supabase', onSelect: refreshData })
+    items.push({ type: 'separator' }, { label: 'Sign out', danger: true, onSelect: onSignOut })
+  } else {
+    items.push({ type: 'separator' }, { label: 'Sign in', onSelect: () => void router.push('/login') })
+  }
+
+  ctx.openFromEvent(e, items)
+}
+
+/** Reloads the snapshot of whatever page is open. */
+async function refreshData() {
+  try {
+    if (route.path.startsWith('/newsletters')) {
+      const store = useNewsletters()
+      await store.load(true)
+      if (!store.loadError.value) toast.success('Newsletters refreshed.')
+    } else if (route.path.startsWith('/site-updates')) {
+      const store = useSiteUpdates()
+      await store.load(true)
+      if (!store.loadError.value) toast.success('Site updates refreshed.')
+    } else {
+      const store = useCalendar()
+      await store.load(true)
+      if (!store.loadError.value) toast.success('Calendar refreshed.')
+    }
+  } catch (err: any) {
+    toast.error(err?.message || 'Could not refresh the data.')
+  }
 }
 </script>

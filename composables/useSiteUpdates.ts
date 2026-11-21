@@ -7,7 +7,7 @@
  * - sync   → Supabase Realtime (`postgres_changes` on `site_updates`)
  * - local  → optimistic updates so the UI never waits on the network
  */
-import type { SiteUpdate, SiteUpdateDraft } from '~/lib/types'
+import type { SiteUpdate, SiteUpdateDraft, SiteUpdateStatus } from '~/lib/types'
 import { useSupabase, edgeFunctionUrl } from '~/lib/supabase'
 import { ref, computed, readonly } from 'vue'
 

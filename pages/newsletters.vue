@@ -1,6 +1,6 @@
 <template>
   <AuthGate>
-    <div class="flex flex-col h-full">
+    <div class="flex min-h-0 flex-1 flex-col">
       <!-- Toolbar -->
       <header class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--eg-border)] px-3 py-2.5 sm:px-4 bg-black/60 backdrop-blur sticky top-0 z-20">
         <div class="flex items-center gap-2 shrink-0">
@@ -59,6 +59,7 @@
             v-for="n in newsletters"
             :key="n.id"
             class="eg-card p-3 relative group"
+            @contextmenu.stop.prevent="onCardContext($event, n)"
           >
             <div class="flex items-start gap-2">
               <span
@@ -114,8 +115,6 @@
         @delete="deleteNewsletter"
         @cancel="editorOpen = false"
       />
-
-      <ToastHost />
     </div>
   </AuthGate>
 </template>
@@ -124,16 +123,18 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Newsletter } from '~/lib/types'
+import type { ContextMenuEntry } from '~/composables/useContextMenu'
 
 import AuthGate from '~/components/AuthGate.vue'
 import NewsletterEditor from '~/components/NewsletterEditor.vue'
-import ToastHost from '~/components/ToastHost.vue'
 
 const router = useRouter()
 
 const newsletter = useNewsletters()
 const auth = useSupabaseAuth()
 const toast = useToast()
+const ctx = useContextMenu()
+const { copyText } = useCopyText()
 
 const {
   newsletters,
@@ -167,6 +168,12 @@ function openEditor(n?: Newsletter) {
   editorOpen.value = true
 }
 
+async function onSignOut() {
+  await auth.signOut()
+  toast.info('Signed out.')
+  await navigateTo('/login')
+}
+
 async function saveNewsletter(draft: any) {
   try {
     await newsletter.save({ action: 'upsert_newsletter', newsletter: draft })
@@ -184,6 +191,25 @@ async function deleteNewsletter(id: string) {
   } catch (err: any) {
     toast.error(err?.message || 'Could not delete newsletter.')
   }
+}
+
+/** Right-click on a newsletter card → contextual actions. */
+function onCardContext(e: MouseEvent, n: Newsletter) {
+  const items: ContextMenuEntry[] = [
+    { label: 'Edit newsletter', onSelect: () => openEditor(n) },
+    { label: 'Copy title', onSelect: () => void copyText(n.title, 'Title copied.') },
+  ]
+  if (n.subject) {
+    items.push({ label: 'Copy subject', onSelect: () => void copyText(n.subject || '', 'Subject copied.') })
+  }
+  if (n.body) {
+    items.push({ label: 'Copy body', onSelect: () => void copyText(n.body, 'Body copied.') })
+  }
+  items.push({ type: 'separator' }, { label: 'Copy status', hint: n.status, onSelect: () => void copyText(n.status, 'Status copied.') })
+  if (isManager.value) {
+    items.push({ type: 'separator' }, { label: 'Delete newsletter', danger: true, onSelect: () => void deleteNewsletter(n.id) })
+  }
+  ctx.openFromEvent(e, items)
 }
 
 async function initApp() {

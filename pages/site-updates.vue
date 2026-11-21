@@ -1,6 +1,6 @@
 <template>
   <AuthGate>
-    <div class="flex flex-col h-full">
+    <div class="flex min-h-0 flex-1 flex-col">
       <!-- Toolbar -->
       <header class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--eg-border)] px-3 py-2.5 sm:px-4 bg-black/60 backdrop-blur sticky top-0 z-20">
         <div class="flex items-center gap-2 shrink-0">
@@ -59,6 +59,7 @@
             v-for="u in siteUpdates"
             :key="u.id"
             class="eg-card p-3 relative group"
+            @contextmenu.stop.prevent="onCardContext($event, u)"
           >
             <div class="flex items-start gap-2">
               <span
@@ -116,8 +117,6 @@
         @delete="deleteSiteUpdate"
         @cancel="editorOpen = false"
       />
-
-      <ToastHost />
     </div>
   </AuthGate>
 </template>
@@ -126,16 +125,18 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { SiteUpdate } from '~/lib/types'
+import type { ContextMenuEntry } from '~/composables/useContextMenu'
 
 import AuthGate from '~/components/AuthGate.vue'
 import SiteUpdateEditor from '~/components/SiteUpdateEditor.vue'
-import ToastHost from '~/components/ToastHost.vue'
 
 const router = useRouter()
 
 const siteUpdate = useSiteUpdates()
 const auth = useSupabaseAuth()
 const toast = useToast()
+const ctx = useContextMenu()
+const { copyText } = useCopyText()
 
 const {
   siteUpdates,
@@ -169,6 +170,12 @@ function openEditor(u?: SiteUpdate) {
   editorOpen.value = true
 }
 
+async function onSignOut() {
+  await auth.signOut()
+  toast.info('Signed out.')
+  await navigateTo('/login')
+}
+
 async function saveSiteUpdate(draft: any) {
   try {
     await siteUpdate.save({ action: 'upsert_site_update', site_update: draft })
@@ -186,6 +193,28 @@ async function deleteSiteUpdate(id: string) {
   } catch (err: any) {
     toast.error(err?.message || 'Could not delete site update.')
   }
+}
+
+/** Right-click on a site-update card → contextual actions. */
+function onCardContext(e: MouseEvent, u: SiteUpdate) {
+  const items: ContextMenuEntry[] = [
+    { label: 'Edit site update', onSelect: () => openEditor(u) },
+    { label: 'Copy title', onSelect: () => void copyText(u.title, 'Title copied.') },
+  ]
+  if (u.slug) {
+    items.push({ label: 'Copy slug', hint: u.slug, onSelect: () => void copyText(u.slug, 'Slug copied.') })
+  }
+  if (u.url) {
+    items.push({ label: 'Copy URL', onSelect: () => void copyText(u.url || '', 'URL copied.') })
+  }
+  if (u.content) {
+    items.push({ label: 'Copy content', onSelect: () => void copyText(u.content, 'Content copied.') })
+  }
+  items.push({ type: 'separator' }, { label: 'Copy status', hint: u.status, onSelect: () => void copyText(u.status, 'Status copied.') })
+  if (isManager.value) {
+    items.push({ type: 'separator' }, { label: 'Delete site update', danger: true, onSelect: () => void deleteSiteUpdate(u.id) })
+  }
+  ctx.openFromEvent(e, items)
 }
 
 async function initApp() {

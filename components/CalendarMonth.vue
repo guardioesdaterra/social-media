@@ -59,6 +59,7 @@
           :aria-label="cell.aria"
           :aria-pressed="cell.date === selected"
           @click="emit('select', cell.date)"
+          @contextmenu.prevent="onDayContext($event, cell)"
         >
           <span class="flex items-start justify-between gap-1">
             <span
@@ -78,6 +79,7 @@
             <span
               v-for="p in cell.previews"
               :key="p.id"
+              :data-post-id="p.id"
               class="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] leading-tight"
               :style="{ background: topicColor(p.topic_key) + '26', color: topicColor(p.topic_key) }"
             >
@@ -92,6 +94,7 @@
             <span
               v-for="p in cell.previews.slice(0, 4)"
               :key="p.id"
+              :data-post-id="p.id"
               class="h-1.5 w-1.5 rounded-full"
               :style="{ background: topicColor(p.topic_key) }"
             />
@@ -104,19 +107,34 @@
 
 <script setup lang="ts">
 import type { CalendarPost, Topic } from '~/lib/types'
+import type { ContextMenuEntry } from '~/composables/useContextMenu'
 import { DOW_FULL, DOW_SHORT, MONTHS } from '~/lib/types'
-import { buildMonthGrid, monthLabel, todayIso, weeksOf, toIsoDay, parseIsoDay } from '~/lib/calendar'
+import { buildMonthGrid, monthLabel, todayIso, toIsoDay, parseIsoDay, dayLabel, daysInMonth } from '~/lib/calendar'
 
 const props = defineProps<{
   cursor: string
   selected: string
   postsByDay: Map<string, CalendarPost[]>
-  topics: Topic[]
+  topics: readonly Topic[]
 }>()
 
-const emit = defineEmits<{ select: [day: string] }>()
+const emit = defineEmits<{
+  select: [day: string]
+  /** Parent owns the cursor — mirrored when the toolbar navigates months. */
+  cursor: [iso: string]
+  /** Ask the parent to open the post editor pre-filled with `day`. */
+  'new-post': [day: string]
+  /** Ask the parent to open the editor for an existing post. */
+  'edit-post': [post: CalendarPost]
+  /** Switch the page to week view around `day`. */
+  'view-week': [day: string]
+}>()
 
 const toast = useToast()
+const auth = useSupabaseAuth()
+const ctx = useContextMenu()
+const { copyText } = useCopyText()
+const isManager = computed(() => auth.phase.value === 'manager')
 
 const { year, month } = toRefs(
   reactive({
@@ -140,7 +158,6 @@ const years = computed(() => {
 })
 
 const grid = computed(() => buildMonthGrid(year.value, month.value))
-const weeks = computed(() => weeksOf(grid.value))
 
 const monthPostCount = computed(() => {
   let n = 0
@@ -212,6 +229,44 @@ function dayNumberClass(cell: CellView) {
   return 'text-zinc-300'
 }
 
+/** Right-click on a day cell (or one of its post chips) → contextual actions. */
+function onDayContext(e: MouseEvent, cell: CellView) {
+  const target = e.target as HTMLElement
+  const chip = target.closest('[data-post-id]') as HTMLElement | null
+  const post = chip
+    ? (props.postsByDay?.get(cell.date) || []).find((p) => p.id === chip.dataset.postId)
+    : null
+
+  if (post) {
+    const items: ContextMenuEntry[] = [
+      { label: 'Edit post', onSelect: () => emit('edit-post', post) },
+      { label: 'Copy title', onSelect: () => void copyText(post.title || 'Untitled', 'Title copied.') },
+      { type: 'separator' },
+      { label: 'New post on this day', onSelect: () => emit('new-post', cell.date) },
+      { label: 'Open day', onSelect: () => emit('select', cell.date) },
+      { type: 'separator' },
+      { label: 'Copy date', onSelect: () => void copyText(dayLabel(cell.date), 'Date copied.') },
+      { label: 'Copy ISO date', hint: cell.date, onSelect: () => void copyText(cell.date, 'Date copied.') },
+    ]
+    ctx.openFromEvent(e, items)
+    return
+  }
+
+  const items: ContextMenuEntry[] = [{ label: 'Open day', onSelect: () => emit('select', cell.date) }]
+  if (isManager.value) {
+    items.push({ label: 'New post on this day', onSelect: () => emit('new-post', cell.date) })
+  }
+  items.push(
+    { type: 'separator' },
+    { label: 'View this week', onSelect: () => emit('view-week', cell.date) },
+    { label: 'Go to today', onSelect: () => emit('cursor', today) },
+    { type: 'separator' },
+    { label: 'Copy date', onSelect: () => void copyText(dayLabel(cell.date), 'Date copied.') },
+    { label: 'Copy ISO date', hint: cell.date, onSelect: () => void copyText(cell.date, 'Date copied.') },
+  )
+  ctx.openFromEvent(e, items)
+}
+
 function shift(delta: number) {
   let m = month.value + delta
   let y = year.value
@@ -231,7 +286,7 @@ function shift(delta: number) {
 }
 
 function go(y: number, m: number) {
-  const day = Math.min(parseIsoDay(props.cursor).day, 28)
+  const day = Math.min(parseIsoDay(props.cursor).day, daysInMonth(y, m))
   const next = toIsoDay(y, m, day)
   year.value = y
   month.value = m
@@ -240,7 +295,7 @@ function go(y: number, m: number) {
 
 function emitCursor(iso: string) {
   // Parent owns the cursor; mirror local nav through the selected day.
-  document.dispatchEvent(new CustomEvent('eg:cursor', { detail: iso }))
+  emit('cursor', iso)
 }
 
 function goToday() {

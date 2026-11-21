@@ -28,6 +28,7 @@
   "devDependencies": {
     "@nuxt/eslint": "^1.15.2",
     "@types/deno": "^2.7.0",
+    "@types/node": "^26.6.6",
     "autoprefixer": "^10.5.0",
     "eslint": "^10.4.0",
     "postcss": "^8.5.15",

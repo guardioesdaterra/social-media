@@ -1,7 +1,7 @@
 <template>
   <div class="flex min-h-screen flex-col">
     <AppHeader />
-    <main class="mx-auto w-full max-w-[1680px] flex-1 px-3 pb-20 pt-4 sm:px-5">
+    <main class="mx-auto w-full max-w-[1680px] flex-1 flex flex-col px-3 pb-20 pt-4 sm:px-5">
       <slot />
     </main>
     <footer

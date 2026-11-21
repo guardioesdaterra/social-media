@@ -28,6 +28,7 @@
         v-for="(day, i) in week"
         :key="day"
         class="border-r border-[var(--eg-border)] last:border-r-0 p-2"
+        @contextmenu.prevent="onDayContext($event, day)"
       >
         <div class="flex items-center justify-between mb-2">
           <div>
@@ -47,6 +48,7 @@
             :key="p.id"
             class="border flex items-start gap-1.5 rounded px-2 py-1.5 text-[10px]"
             :style="{ background: topicColor(p.topic_key) + '12', borderColor: topicColor(p.topic_key) + '33' }"
+            @contextmenu.stop.prevent="onPostContext($event, p)"
           >
             <span class="shrink-0 h-3 w-3 rounded-full" :style="{ background: topicColor(p.topic_key) }" />
             <div class="flex-1 min-w-0">
@@ -100,23 +102,32 @@
 
 <script setup lang="ts">
 import type { CalendarPost, Topic } from '~/lib/types'
+import type { ContextMenuEntry } from '~/composables/useContextMenu'
 import {
   parseIsoDay,
   addDays,
+  dayLabel,
 } from '~/lib/calendar'
 import { computed } from 'vue'
 
 const props = defineProps<{
   week: string[]
   postsByDay: Map<string, CalendarPost[]>
-  topics: Topic[]
+  topics: readonly Topic[]
   selected: string
 }>()
 
 const emit = defineEmits<{
   select: [day: string]
   edit: [post: CalendarPost]
+  'new-post': [day: string]
+  'view-month': [day: string]
 }>()
+
+const auth = useSupabaseAuth()
+const ctx = useContextMenu()
+const { copyText } = useCopyText()
+const isManager = computed(() => auth.phase.value === 'manager')
 
 const topicMap = computed(() => {
   const m = new Map<string, Topic>()
@@ -166,7 +177,7 @@ function dayPosts(day: string): CalendarPost[] {
 }
 
 function dowShort(iso: string): string {
-  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseIsoDay(iso).weekday]
+  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseIsoDay(iso).weekday] ?? 'Sun'
 }
 
 function dowClass(iso: string): string {
@@ -188,24 +199,24 @@ function isSelected(iso: string): boolean {
 const weekLabel = computed(() => {
   const days = props.week
   if (!days.length) return ''
-  const a = parseIsoDay(days[0])
-  const b = parseIsoDay(days[days.length - 1])
+  const a = parseIsoDay(days[0]!)
+  const b = parseIsoDay(days[days.length - 1]!)
   const left = `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][a.month - 1]} ${a.day}`
   const right = a.year === b.year ? `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][b.month - 1]} ${b.day}, ${b.year}` : `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][b.month - 1]} ${b.day}, ${b.year}`
   return `${left} – ${right}`
 })
 
 function shift(delta: number) {
-  const first = props.week[0]
+  const first = props.week[0]!
   const p = parseIsoDay(first)
   const start = addDays(p.day ? `${String(p.year).padStart(4, '0')}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}` : first, delta * 7)
-  $emit('select', start)
+  emit('select', start)
 }
 
 function goToday() {
   const n = new Date()
   const t = `${String(n.getFullYear()).padStart(4, '0')}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
-  $emit('select', t)
+  emit('select', t)
 }
 
 function moveDay(day: string, delta: number) {
@@ -213,7 +224,41 @@ function moveDay(day: string, delta: number) {
   if (list.length === 0) return
   const target = addDays(day, delta)
   list.forEach((p) => {
-    $emit('edit', { ...p, day: target })
+    emit('edit', { ...p, day: target })
   })
+}
+
+/** Right-click on a week column → day-level actions. */
+function onDayContext(e: MouseEvent, day: string) {
+  const items: ContextMenuEntry[] = [{ label: 'Open day', onSelect: () => emit('select', day) }]
+  if (isManager.value) {
+    items.push({ label: 'New post on this day', onSelect: () => emit('new-post', day) })
+  }
+  items.push(
+    { type: 'separator' },
+    { label: 'View month', onSelect: () => emit('view-month', day) },
+    { label: 'Go to today', onSelect: () => goToday() },
+    { type: 'separator' },
+    { label: 'Copy date', onSelect: () => void copyText(dayLabel(day), 'Date copied.') },
+    { label: 'Copy ISO date', hint: day, onSelect: () => void copyText(day, 'Date copied.') },
+  )
+  ctx.openFromEvent(e, items)
+}
+
+/** Right-click on a post card → post-level actions. */
+function onPostContext(e: MouseEvent, p: CalendarPost) {
+  const items: ContextMenuEntry[] = [
+    { label: 'Edit post', onSelect: () => emit('edit', p) },
+    { label: 'Copy title', onSelect: () => void copyText(p.title || 'Untitled', 'Title copied.') },
+  ]
+  if (p.caption) {
+    items.push({ label: 'Copy caption', onSelect: () => void copyText(p.caption, 'Caption copied.') })
+  }
+  items.push(
+    { type: 'separator' },
+    { label: 'Open day', onSelect: () => emit('select', p.day) },
+    { label: 'Copy post date', hint: p.day, onSelect: () => void copyText(p.day, 'Date copied.') },
+  )
+  ctx.openFromEvent(e, items)
 }
 </script>

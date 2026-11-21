@@ -26,7 +26,7 @@
               type="text"
               class="eg-input text-sm"
               :value="form.title"
-              @input="form.title = $event.target.value"
+              @input="form.title = ($event.target as HTMLInputElement).value"
               maxlength="200"
               placeholder="e.g. New restoration dashboard launched"
               required
@@ -42,7 +42,7 @@
               type="text"
               class="eg-input text-sm"
               :value="form.slug"
-              @input="form.slug = $event.target.value"
+              @input="form.slug = ($event.target as HTMLInputElement).value"
               maxlength="200"
               placeholder="e.g. restoration-dashboard"
               required
@@ -71,7 +71,7 @@
               type="datetime-local"
               class="eg-input text-sm"
               :value="form.published_at"
-              @input="form.published_at = $event.target.value"
+              @input="form.published_at = ($event.target as HTMLInputElement).value"
             />
           </div>
 
@@ -84,7 +84,7 @@
               type="text"
               class="eg-input text-sm"
               :value="form.url"
-              @input="form.url = $event.target.value"
+              @input="form.url = ($event.target as HTMLInputElement).value"
               placeholder="https://earthguardians.org/restoration-dashboard"
             />
           </div>
@@ -98,7 +98,7 @@
               class="eg-input text-sm font-mono"
               rows="12"
               :value="form.content"
-              @input="form.content = $event.target.value"
+              @input="form.content = ($event.target as HTMLTextAreaElement).value"
               placeholder="<h1>Welcome</h1><p>...</p>"
               required
             ></textarea>

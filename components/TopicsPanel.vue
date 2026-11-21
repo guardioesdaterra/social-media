@@ -28,7 +28,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-baseline gap-1">
                 <span class="flex-shrink-0 text-[10px] font-bold text-zinc-500">#{{ i + 1}}</span>
-                <span class="text-sm font-medium text-white truncate" title="{{ t.label }}">{{ t.label }}</span>
+                <span class="text-sm font-medium text-white truncate" :title="t.label">{{ t.label }}</span>
               </div>
               <p class="text-[10px] text-zinc-500 truncate max-w-[70%]">{{ t.description }}</p>
             </div>
@@ -96,7 +96,7 @@
                 <span class="text-[10px] font-semibold text-zinc-400">sort {{ t.sort }}</span>
                 <span v-if="t.needs_attention" class="text-[9px] px-1.5 py-0 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">#{{ t.attention_rank }}</span>
               </div>
-              <span class="block text-sm font-medium text-white truncate" title="{{ t.label }}">{{ t.label }}</span>
+              <span class="block text-sm font-medium text-white truncate" :title="t.label">{{ t.label }}</span>
               <p class="text-[10px] text-zinc-500 truncate">{{ t.description }}</p>
             </div>
           </div>
@@ -146,7 +146,7 @@ import type { Topic } from '~/lib/types'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
-  topics: Topic[]
+  topics: readonly Topic[]
 }>()
 
 const emit = defineEmits<{
@@ -178,6 +178,7 @@ function hasPosts(key: string): boolean {
 function moveAttention(from: number, to: number) {
   const list = attention.value
   const [moved] = list.splice(from, 1)
+  if (!moved) return
   list.splice(to, 0, moved)
   const items = list.map((t, i) => ({ key: t.key, sort: i + 1 }))
   emit('reorder', items)

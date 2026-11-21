@@ -7,7 +7,7 @@
  * - sync   → Supabase Realtime (`postgres_changes` on `newsletters`)
  * - local  → optimistic updates so the UI never waits on the network
  */
-import type { Newsletter, NewsletterDraft } from '~/lib/types'
+import type { Newsletter, NewsletterDraft, NewsletterStatus } from '~/lib/types'
 import { useSupabase, edgeFunctionUrl } from '~/lib/supabase'
 import { ref, computed, readonly } from 'vue'
 
