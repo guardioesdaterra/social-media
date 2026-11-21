@@ -281,8 +281,8 @@ async function handleSubmit() {
 
   saving.value = true
   emit('save', draft)
-  close()
-  saving.value = false
+  // Do not close here: the parent closes the modal after the save promise
+  // resolves. Closing now would lose the form if the server rejects it.
 }
 
 async function handleDelete() {

@@ -46,31 +46,46 @@
             >
               Week
             </button>
+            <button
+              class="px-2.5 py-1 text-xs text-sm text-zinc-400 hover:text-white transition"
+              :class="{ 'bg-white/20 text-white': view === 'list' }"
+              @click="view = 'list'"
+            >
+              List
+            </button>
           </div>
 
-          <button
-            class="eg-btn-primary !px-3 !py-1.5 text-xs shrink-0"
-            :disabled="!isManager"
-            @click="openEditor()"
-          >
-            + New post
-          </button>
-
-          <NuxtLink
-            to="/newsletters"
-            class="eg-btn-ghost !px-2.5 !py-1.5 text-xs shrink-0"
-            :class="{ 'bg-white/10': $route.path.startsWith('/newsletters') }"
-          >
-            Newsletters
-          </NuxtLink>
-
-          <NuxtLink
-            to="/site-updates"
-            class="eg-btn-ghost !px-2.5 !py-1.5 text-xs shrink-0"
-            :class="{ 'bg-white/10': $route.path.startsWith('/site-updates') }"
-          >
-            Site updates
-          </NuxtLink>
+          <div class="flex items-center gap-1">
+            <span class="text-[10px] text-zinc-500 shrink-0">Filter</span>
+            <button
+              class="px-2 py-1 text-xs rounded transition"
+              :class="{ 'bg-white/20 text-white': filter === 'all' }"
+              @click="filter = 'all'"
+            >
+              All
+            </button>
+            <button
+              class="px-2 py-1 text-xs rounded transition"
+              :class="{ 'bg-white/20 text-white': filter === 'posts' }"
+              @click="filter = 'posts'"
+            >
+              Posts
+            </button>
+            <button
+              class="px-2 py-1 text-xs rounded transition"
+              :class="{ 'bg-white/20 text-white': filter === 'newsletters' }"
+              @click="filter = 'newsletters'"
+            >
+              Newsletters
+            </button>
+            <button
+              class="px-2 py-1 text-xs rounded transition"
+              :class="{ 'bg-white/20 text-white': filter === 'site_updates' }"
+              @click="filter = 'site_updates'"
+            >
+              Site updates
+            </button>
+          </div>
 
           <button
             class="eg-btn-ghost !px-2.5 !py-1.5 text-xs shrink-0"
@@ -117,24 +132,35 @@
             v-if="view === 'month'"
             :cursor="cursor"
             :selected="cursor"
-            :items-by-day="itemsByDay"
+            :items-by-day="filteredItemsByDay"
             :topics="topics"
             @select="setCursor"
             @cursor="onChildCursor"
             @new-post="onNewPost"
             @edit-item="openItemEditor"
             @view-week="onViewWeek"
+            @move-item="moveCalendarItem"
           />
           <CalendarWeek
-            v-else
+            v-else-if="view === 'week'"
             :week="weekDays"
-            :items-by-day="itemsByDay"
+            :items-by-day="filteredItemsByDay"
             :topics="topics"
             :selected="cursor"
             @select="setCursor"
             @edit-item="openItemEditor"
             @new-post="onNewPost"
             @view-month="onViewMonth"
+            @move-item="moveCalendarItem"
+          />
+          <CalendarList
+            v-else
+            :items-by-day="filteredItemsByDay"
+            :topics="topics"
+            :selected="cursor"
+            @select="setCursor"
+            @edit-item="openItemEditor"
+            @move-item="moveCalendarItem"
           />
         </div>
 
@@ -158,6 +184,7 @@
               @edit-item="openItemEditor"
               @delete="deletePost"
               @save="savePost"
+              @move-item="moveCalendarItem"
             />
           </div>
           <div class="border-t border-[var(--eg-border)] p-3 text-center">
@@ -205,6 +232,7 @@
                 @edit-item="openItemEditor"
                 @delete="deletePost"
                 @save="savePost"
+                @move-item="moveCalendarItem"
               />
             </div>
           </div>
@@ -253,6 +281,7 @@ import { makeCalendarItem } from '~/lib/types'
 import AuthGate from '~/components/AuthGate.vue'
 import CalendarMonth from '~/components/CalendarMonth.vue'
 import CalendarWeek from '~/components/CalendarWeek.vue'
+import CalendarList from '~/components/CalendarList.vue'
 import DayPanel from '~/components/DayPanel.vue'
 import TopicsPanel from '~/components/TopicsPanel.vue'
 import PostEditor from '~/components/PostEditor.vue'
@@ -306,9 +335,10 @@ const isManager = computed(() => auth.phase.value === 'manager')
 
 // ---- cursor / view state ----
 const cursor = ref(todayIso())
-const view = ref<'month' | 'week'>('month')
+const view = ref<'month' | 'week' | 'list'>('month')
 const showSheet = ref(false)
 const panelMode = ref<'day' | 'topics'>('day')
+const filter = ref<'all' | 'posts' | 'newsletters' | 'site_updates'>('all')
 
 // editors
 const editorOpen = ref(false)
@@ -323,7 +353,7 @@ const cursorMonth = computed(() => parseIsoDay(cursor.value).month)
 
 const weekDays = computed(() => weekOf(cursor.value))
 
-const dayItems = computed(() => itemsByDay.value.get(cursor.value) || [])
+const dayItems = computed(() => filteredItemsByDay.value.get(cursor.value) || [])
 
 const loading = computed(() => calendar.loading.value || nlLoading.value || suLoading.value)
 const loadError = computed(() => calendarLoadError.value || nlLoadError.value || suLoadError.value)
@@ -347,6 +377,22 @@ const itemsByDay = computed(() => {
   }
   for (const list of map.values()) {
     list.sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '') || a.title.localeCompare(b.title))
+  }
+  return map
+})
+
+/** Filtered view of itemsByDay according to the active filter chip. */
+const filteredItemsByDay = computed(() => {
+  if (filter.value === 'all') return itemsByDay.value
+  const map = new Map<string, CalendarItem[]>()
+  for (const [day, items] of itemsByDay.value.entries()) {
+    const filtered = items.filter((i) => {
+      if (filter.value === 'posts') return i.kind === 'post'
+      if (filter.value === 'newsletters') return i.kind === 'newsletter'
+      if (filter.value === 'site_updates') return i.kind === 'site_update'
+      return true
+    })
+    if (filtered.length) map.set(day, filtered)
   }
   return map
 })
@@ -395,6 +441,16 @@ function openItemEditor(item: CalendarItem) {
   }
   editorSiteUpdate.value = item.site_update
   siteUpdateEditorOpen.value = true
+}
+
+/** Move a calendar item to a new day (drag & drop). */
+async function moveCalendarItem(id: string, kind: string, day: string) {
+  try {
+    await calendar.moveItem(id, kind as import('~/lib/types').CalendarItemKind, day)
+    toast.success('Item moved.')
+  } catch (err: any) {
+    toast.error(err?.message || 'Could not move item.')
+  }
 }
 
 async function onSignOut() {

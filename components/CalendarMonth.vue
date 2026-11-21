@@ -55,7 +55,6 @@
           type="button"
           class="group relative min-h-[62px] border-b border-r border-[var(--eg-border)] p-1 text-left transition
             last:border-r-0 sm:min-h-[112px] sm:p-1.5"
-          :class="cellClasses(cell)"
           :aria-label="cell.aria"
           :aria-pressed="cell.date === selected"
           @click="emit('select', cell.date)"
@@ -134,6 +133,7 @@ type CalendarMonthEmits = {
   'new-post': [day: string]
   'edit-item': [item: CalendarItem]
   'view-week': [day: string]
+  'move-item': [id: string, kind: string, day: string]
 }
 
 const emit = defineEmits<CalendarMonthEmits>()
@@ -228,7 +228,7 @@ const weeksView = computed(() => {
 
 const today = todayIso()
 
-const dragSource = ref<{ id: string; kind: string } | null>(null)
+const dragSource = ref<{ id: string; kind: string; day: string } | null>(null)
 const dragOverCell = ref<string | null>(null)
 
 function cellClasses(cell: CellView) {
@@ -334,7 +334,7 @@ function goToday() {
 
 /** Drag: item chip picked up. */
 function onItemDragStart(e: DragEvent, item: CalendarItem) {
-  dragSource.value = { id: item.id, kind: item.kind }
+  dragSource.value = { id: item.id, kind: item.kind, day: item.day }
   e.dataTransfer?.setData('application/json', JSON.stringify({ id: item.id, kind: item.kind, day: item.day }))
   e.dataTransfer!.effectAllowed = 'move'
 }

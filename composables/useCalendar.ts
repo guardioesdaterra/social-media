@@ -233,7 +233,8 @@ export function useCalendar() {
     save({ action: 'reorder_posts', items })
   const saveTopic = (topic: Topic) => save({ action: 'upsert_topic', topic })
   const deleteTopic = (key: string) => save({ action: 'delete_topic', key })
-  const reorderTopics = (items: { key: string; sort: number }[][]) => save({ action: 'reorder_topics', items: items.flat() })
+  const reorderTopics = (items: { key: string; sort: number }[]) =>
+    save({ action: 'reorder_topics', items })
   const setAttention = (items: { key: string; attention_rank: number | null }[]) =>
     save({ action: 'set_attention', items })
   const saveSetting = (key: string, value: unknown) => save({ action: 'upsert_setting', key, value })

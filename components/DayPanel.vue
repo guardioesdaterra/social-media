@@ -159,7 +159,7 @@ const emit = defineEmits<{
 const { phase } = useSupabaseAuth()
 const canEdit = computed(() => phase.value === 'manager')
 
-const dragSource = ref<{ id: string; kind: string } | null>(null)
+const dragSource = ref<{ id: string; kind: string; day: string } | null>(null)
 const dragOver = ref<string | null>(null)
 
 const ctx = useContextMenu()
@@ -272,5 +272,27 @@ async function downloadImage(id: string | undefined) {
   if (!item?.post.image_base64) return
   const { downloadDataUrl, slugify } = await import('~/lib/image')
   downloadDataUrl(item.post.image_base64, slugify(`${item.post.day}_${item.post.topic_key}`) + '.' + (item.post.image_mime?.split('/')[1] || 'jpg'))
+}
+
+/** Drag: item picked up. */
+function onItemDragStart(e: DragEvent, item: CalendarItem) {
+  dragSource.value = { id: item.id, kind: item.kind, day: item.day }
+  e.dataTransfer?.setData('application/json', JSON.stringify({ id: item.id, kind: item.kind, day: item.day }))
+  e.dataTransfer!.effectAllowed = 'move'
+}
+
+/** Drag: item released. */
+function onItemDragEnd() {
+  dragSource.value = null
+  dragOver.value = null
+}
+
+/** Drag: item dropped onto another item → move to that item's day (props.day). */
+function onItemDrop(e: DragEvent, targetItem: CalendarItem) {
+  e.preventDefault()
+  dragOver.value = null
+  if (!dragSource.value || dragSource.value.id === targetItem.id) return
+  emit('move-item', dragSource.value.id, dragSource.value.kind, props.day)
+  dragSource.value = null
 }
 </script>

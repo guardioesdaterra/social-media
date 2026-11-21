@@ -88,6 +88,8 @@ async function dispatch(
       return await reorderTopics(admin, user, body.items)
     case 'set_attention':
       return await setAttention(admin, user, body.items)
+    case 'move_item':
+      return await moveItem(admin, user, String(body.id ?? ''), String(body.kind ?? ''), String(body.day ?? ''))
     case 'upsert_setting':
       return await upsertSetting(admin, user, body.key, body.value)
     default:
@@ -468,6 +470,83 @@ async function setAttention(
   }
 
   return { action: 'set_attention', topics }
+}
+
+/* ------------------------------------------------------------------ */
+/* Move item between days                                             */
+/* ------------------------------------------------------------------ */
+
+async function moveItem(
+  admin: SupabaseClient,
+  user: AuthedUser,
+  id: string,
+  kind: string,
+  day: string,
+): Promise<Record<string, unknown>> {
+  if (!id) return httpError('Missing item id')
+  if (!isValidIsoDay(day)) return httpError('Invalid target day. Expected YYYY-MM-DD.')
+
+  if (kind === 'post') {
+    const { data: existing, error: findErr } = await admin
+      .from('calendar_posts')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle()
+    if (findErr) httpError(findErr.message, 500)
+    if (!existing) return httpError('Post not found.', 404)
+
+    const sortOrder = await nextSortOrder(admin, day)
+    const { data, error } = await admin
+      .from('calendar_posts')
+      .update({ day, sort_order: sortOrder, updated_at: new Date().toISOString(), updated_by: user.email })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) httpError(error.message, 500)
+    return { action: 'move_item', post: data }
+  }
+
+  if (kind === 'newsletter') {
+    const { data: existing, error: findErr } = await admin
+      .from('newsletters')
+      .select('id, scheduled_at')
+      .eq('id', id)
+      .maybeSingle()
+    if (findErr) httpError(findErr.message, 500)
+    if (!existing) return httpError('Newsletter not found.', 404)
+
+    const timePart = (existing.scheduled_at as string | null)?.slice(10) || 'T00:00:00'
+    const { data, error } = await admin
+      .from('newsletters')
+      .update({ scheduled_at: `${day}${timePart}`, updated_at: new Date().toISOString(), updated_by: user.email })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) httpError(error.message, 500)
+    return { action: 'move_item', newsletter: data }
+  }
+
+  if (kind === 'site_update') {
+    const { data: existing, error: findErr } = await admin
+      .from('site_updates')
+      .select('id, published_at')
+      .eq('id', id)
+      .maybeSingle()
+    if (findErr) httpError(findErr.message, 500)
+    if (!existing) return httpError('Site update not found.', 404)
+
+    const timePart = (existing.published_at as string | null)?.slice(10) || 'T00:00:00'
+    const { data, error } = await admin
+      .from('site_updates')
+      .update({ published_at: `${day}${timePart}`, updated_at: new Date().toISOString(), updated_by: user.email })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) httpError(error.message, 500)
+    return { action: 'move_item', site_update: data }
+  }
+
+  return httpError(`Unknown item kind: ${kind}`)
 }
 
 /* ------------------------------------------------------------------ */

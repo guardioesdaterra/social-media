@@ -187,9 +187,9 @@ function moveAttention(from: number, to: number) {
 function addAttention(key: string) {
   const t = props.topics.find((x) => x.key === key)
   if (!t) return
-  const nextRank = (attention.value.length || 0) + 1
+  const nextRank = attention.value.length + 1
   const items = [
-    ...attention.value.map((x) => ({ key: x.key, attention_rank: (attention.value.indexOf(x) || 0) + 1 })),
+    ...attention.value.map((x, i) => ({ key: x.key, attention_rank: i + 1 })),
     { key, attention_rank: nextRank },
   ]
   emit('set-attention', items)

@@ -49,10 +49,10 @@
 
               <!-- Post-specific body -->
               <div v-if="item.kind === 'post'" class="mt-1">
-                <p v-if="postOf(item)?.caption" class="text-xs text-zinc-400 line-clamp-2">{{ postOf(item)?.caption }}</p>
-                <div v-if="postOf(item)?.hashtags" class="mt-1 flex flex-wrap gap-1">
+                <p v-if="postOf(item)?.post.caption" class="text-xs text-zinc-400 line-clamp-2">{{ postOf(item)?.post.caption }}</p>
+                <div v-if="postOf(item)?.post.hashtags" class="mt-1 flex flex-wrap gap-1">
                   <span
-                    v-for="tag in (postOf(item)?.hashtags || '').split(/\s+/).filter(Boolean)"
+                    v-for="tag in (postOf(item)?.post.hashtags || '').split(/\s+/).filter(Boolean)"
                     :key="tag"
                     class="rounded bg-white/[0.05] px-1 py-0 text-[9px] text-zinc-300"
                   >
@@ -160,10 +160,10 @@ function statusColor(status: string): string {
 }
 
 function postOf(item: CalendarItem): CalendarItemPost | null {
-  return item.kind === 'post' ? (item as unknown as CalendarItemPost) : null
+  return item.kind === 'post' ? (item as CalendarItemPost) : null
 }
 
-const dragSource = ref<{ id: string; kind: string } | null>(null)
+const dragSource = ref<{ id: string; kind: string; day: string } | null>(null)
 const dragOver = ref<string | null>(null)
 
 const groupedDays = computed(() => {
@@ -177,7 +177,7 @@ function itemsFor(day: string): CalendarItem[] {
 }
 
 function onDragStart(e: DragEvent, item: CalendarItem) {
-  dragSource.value = { id: item.id, kind: item.kind }
+  dragSource.value = { id: item.id, kind: item.kind, day: item.day }
   dragOver.value = item.id
   e.dataTransfer?.setData('application/json', JSON.stringify({ id: item.id, kind: item.kind, day: item.day }))
   e.dataTransfer!.effectAllowed = 'move'

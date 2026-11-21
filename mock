@@ -1,0 +1,14 @@
+│
+●  Nuxt 3.21.11 (with Nitro 2.13.6, Vite 7.3.8 and Vue 3.5.45)
+[get-port] Unable to find an available port (tried 3000 on host "localhost"). Using alternative port 3001.
+
+  ➜ Local:    http://localhost:3001/
+  ➜ Network:  use --host to expose
+
+[nuxt:tailwindcss] ℹ Using default Tailwind CSS file
+  ➜ DevTools: press Shift + Alt + D in the browser (v3.4.4)
+
+✔ Vite client built in 66ms
+✔ Vite server built in 1414ms
+[nitro] ✔ Nuxt Nitro server built in 1002ms
+ℹ Vite client warmed up in 3ms

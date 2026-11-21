@@ -141,7 +141,7 @@ const ctx = useContextMenu()
 const { copyText } = useCopyText()
 const isManager = computed(() => auth.phase.value === 'manager')
 
-const dragSource = ref<{ id: string; kind: string } | null>(null)
+const dragSource = ref<{ id: string; kind: string; day: string } | null>(null)
 const dragOver = ref<string | null>(null)
 const dragOverCol = ref<string | null>(null)
 
@@ -243,7 +243,7 @@ function moveDay(day: string, delta: number) {
 
 /** Drag: item picked up. */
 function onItemDragStart(e: DragEvent, item: CalendarItem) {
-  dragSource.value = { id: item.id, kind: item.kind }
+  dragSource.value = { id: item.id, kind: item.kind, day: item.day }
   e.dataTransfer?.setData('application/json', JSON.stringify({ id: item.id, kind: item.kind, day: item.day }))
   e.dataTransfer!.effectAllowed = 'move'
 }
