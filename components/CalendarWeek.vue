@@ -29,6 +29,9 @@
         :key="day"
         class="border-r border-[var(--eg-border)] last:border-r-0 p-2"
         @contextmenu.prevent="onDayContext($event, day)"
+        @dragover.prevent="onColDragOver($event, day)"
+        @drop="onColDrop($event, day)"
+        :class="{ 'ring-2 ring-[var(--eg-accent)]': dragOverCol === day }"
       >
         <div class="flex items-center justify-between mb-2">
           <div>
@@ -44,29 +47,36 @@
 
         <div class="space-y-1.5 min-h-[200px]">
           <div
-            v-for="p in postsFor(day)"
-            :key="p.id"
-            class="border flex items-start gap-1.5 rounded px-2 py-1.5 text-[10px]"
-            :style="{ background: topicColor(p.topic_key) + '12', borderColor: topicColor(p.topic_key) + '33' }"
-            @contextmenu.stop.prevent="onPostContext($event, p)"
+            v-for="item in itemsFor(day)"
+            :key="item.id"
+            class="border flex items-start gap-1.5 rounded px-2 py-1.5 text-[10px] cursor-move"
+            :style="{ background: itemColor(item) + '12', borderColor: itemColor(item) + '33', opacity: dragSource?.id === item.id ? 0.4 : 1 }"
+            draggable="true"
+            @dragstart="onItemDragStart($event, item)"
+            @dragend="onItemDragEnd"
+            @contextmenu.stop.prevent="onItemContext($event, item)"
+            @dragover.prevent
+            @drop="onItemDrop($event, item, day)"
+            :class="{ 'ring-1 ring-[var(--eg-accent)]': dragOver === item.id }"
           >
-            <span class="shrink-0 h-3 w-3 rounded-full" :style="{ background: topicColor(p.topic_key) }" />
+            <span class="shrink-0 h-3 w-3 rounded-full" :style="{ background: itemColor(item) }" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-1 mb-0.5">
-                <span class="inline-flex items-center rounded px-1 py-0 text-[8px] font-medium" :style="{ background: formatColor(p.format) + '20', color: formatColor(p.format) }">{{ p.format }}</span>
-                <span class="inline-flex items-center rounded px-1 py-0 text-[8px] font-medium" :style="{ background: statusColor(p.status) + '20', color: statusColor(p.status) }">{{ statusShort(p.status) }}</span>
+                <span class="inline-flex items-center rounded px-1 py-0 text-[8px] font-medium" :style="{ background: itemColor(item) + '20', color: itemColor(item) }">{{ itemKindLabel(item.kind) }}</span>
+                <span v-if="item.status" class="inline-flex items-center rounded px-1 py-0 text-[8px] font-medium" :style="{ background: statusColor(item.status) + '20', color: statusColor(item.status) }">{{ statusShort(item.status) }}</span>
               </div>
-              <div class="truncate text-zinc-200 leading-tight">{{ p.title || '(no title)' }}</div>
+              <div class="truncate text-zinc-200 leading-tight">{{ item.title || '(no title)' }}</div>
+              <span v-if="item.time" class="block mt-0.5 text-[9px] opacity-70">{{ item.time.slice(11, 16) }}</span>
             </div>
             <button
               class="ml-auto shrink-0 eg-btn-ghost !px-1 !py-0.5 text-[9px] text-zinc-400 hover:text-white"
-              @click="$emit('edit', p)"
+              @click="$emit('edit-item', item)"
             >
               Edit
             </button>
           </div>
 
-          <div v-if="dayPosts(day).length === 0" class="h-4 flex items-center justify-center">
+          <div v-if="itemsFor(day).length === 0" class="h-4 flex items-center justify-center">
             <span class="text-[9px] text-zinc-600">—</span>
           </div>
         </div>
@@ -101,33 +111,39 @@
 </template>
 
 <script setup lang="ts">
-import type { CalendarPost, Topic } from '~/lib/types'
+import type { CalendarItem, Topic } from '~/lib/types'
 import type { ContextMenuEntry } from '~/composables/useContextMenu'
 import {
   parseIsoDay,
   addDays,
   dayLabel,
 } from '~/lib/calendar'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { itemKindColor, itemKindLabel } from '~/lib/types'
 
 const props = defineProps<{
   week: string[]
-  postsByDay: Map<string, CalendarPost[]>
+  itemsByDay: Map<string, CalendarItem[]>
   topics: readonly Topic[]
   selected: string
 }>()
 
 const emit = defineEmits<{
   select: [day: string]
-  edit: [post: CalendarPost]
+  'edit-item': [item: CalendarItem]
   'new-post': [day: string]
   'view-month': [day: string]
+  'move-item': [id: string, kind: string, day: string]
 }>()
 
 const auth = useSupabaseAuth()
 const ctx = useContextMenu()
 const { copyText } = useCopyText()
 const isManager = computed(() => auth.phase.value === 'manager')
+
+const dragSource = ref<{ id: string; kind: string } | null>(null)
+const dragOver = ref<string | null>(null)
+const dragOverCol = ref<string | null>(null)
 
 const topicMap = computed(() => {
   const m = new Map<string, Topic>()
@@ -139,16 +155,9 @@ function topicColor(key: string): string {
   return topicMap.value.get(key)?.color || '#71717a'
 }
 
-const formatColors: Record<string, string> = {
-  Carousel: '#3b82f6',
-  Photo: '#22c55e',
-  Reel: '#ec4899',
-  Story: '#a855f7',
-  Video: '#f59e0b',
-}
-
-function formatColor(format: string): string {
-  return formatColors[format] ?? '#71717a'
+function itemColor(item: CalendarItem): string {
+  if (item.kind === 'post') return topicColor(item.post.topic_key)
+  return itemKindColor(item.kind)
 }
 
 const statusColors: Record<string, string> = {
@@ -156,6 +165,10 @@ const statusColors: Record<string, string> = {
   production: '#eab308',
   approved: '#3b82f6',
   published: '#22c55e',
+  draft: '#71717a',
+  scheduled: '#eab308',
+  sent: '#22c55e',
+  archived: '#71717a',
 }
 
 function statusColor(status: string): string {
@@ -163,17 +176,17 @@ function statusColor(status: string): string {
 }
 
 function statusShort(status: string): string {
-  const map: Record<string, string> = { planned: 'Planned', production: 'Prod.', approved: 'Approved', published: 'Live' }
+  const map: Record<string, string> = { planned: 'Planned', production: 'Prod.', approved: 'Approved', published: 'Live', draft: 'Draft', scheduled: 'Scheduled', sent: 'Sent', archived: 'Archived' }
   return map[status] ?? status
 }
 
-function postsFor(day: string): CalendarPost[] {
-  const list = props.postsByDay.get(day) || []
-  return [...list].sort((a, b) => a.sort_order - b.sort_order || (a.created_at ?? '').localeCompare(b.created_at ?? ''))
+function itemsFor(day: string): CalendarItem[] {
+  const list = props.itemsByDay.get(day) || []
+  return [...list].sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '') || a.title.localeCompare(b.title))
 }
 
-function dayPosts(day: string): CalendarPost[] {
-  return props.postsByDay.get(day) || []
+function dayPosts(day: string): CalendarItem[] {
+  return props.itemsByDay.get(day) || []
 }
 
 function dowShort(iso: string): string {
@@ -224,8 +237,46 @@ function moveDay(day: string, delta: number) {
   if (list.length === 0) return
   const target = addDays(day, delta)
   list.forEach((p) => {
-    emit('edit', { ...p, day: target })
+    if (p.kind === 'post') emit('edit-item', { ...p, post: { ...p.post, day: target } })
   })
+}
+
+/** Drag: item picked up. */
+function onItemDragStart(e: DragEvent, item: CalendarItem) {
+  dragSource.value = { id: item.id, kind: item.kind }
+  e.dataTransfer?.setData('application/json', JSON.stringify({ id: item.id, kind: item.kind, day: item.day }))
+  e.dataTransfer!.effectAllowed = 'move'
+}
+
+/** Drag: item released. */
+function onItemDragEnd() {
+  dragSource.value = null
+  dragOver.value = null
+}
+
+/** Drag: item dropped onto another item → move to that item's day. */
+function onItemDrop(e: DragEvent, targetItem: CalendarItem, targetDay: string) {
+  e.preventDefault()
+  dragOver.value = null
+  if (!dragSource.value || dragSource.value.id === targetItem.id) return
+  emit('move-item', dragSource.value.id, dragSource.value.kind, targetDay)
+  dragSource.value = null
+}
+
+/** Drag: over a day column. */
+function onColDragOver(e: DragEvent, day: string) {
+  e.preventDefault()
+  e.dataTransfer!.dropEffect = 'move'
+  dragOverCol.value = day
+}
+
+/** Drag: dropped onto a day column → move item to that day. */
+function onColDrop(_e: DragEvent, day: string) {
+  if (!dragSource.value) return
+  dragOverCol.value = null
+  if (dragSource.value.day === day) return
+  emit('move-item', dragSource.value.id, dragSource.value.kind, day)
+  dragSource.value = null
 }
 
 /** Right-click on a week column → day-level actions. */
@@ -245,19 +296,16 @@ function onDayContext(e: MouseEvent, day: string) {
   ctx.openFromEvent(e, items)
 }
 
-/** Right-click on a post card → post-level actions. */
-function onPostContext(e: MouseEvent, p: CalendarPost) {
+/** Right-click on a calendar item → item-level actions. */
+function onItemContext(e: MouseEvent, item: CalendarItem) {
   const items: ContextMenuEntry[] = [
-    { label: 'Edit post', onSelect: () => emit('edit', p) },
-    { label: 'Copy title', onSelect: () => void copyText(p.title || 'Untitled', 'Title copied.') },
+    { label: `Edit ${itemKindLabel(item.kind)}`, onSelect: () => emit('edit-item', item) },
+    { label: 'Copy title', onSelect: () => void copyText(item.title || 'Untitled', 'Title copied.') },
   ]
-  if (p.caption) {
-    items.push({ label: 'Copy caption', onSelect: () => void copyText(p.caption, 'Caption copied.') })
-  }
   items.push(
     { type: 'separator' },
-    { label: 'Open day', onSelect: () => emit('select', p.day) },
-    { label: 'Copy post date', hint: p.day, onSelect: () => void copyText(p.day, 'Date copied.') },
+    { label: 'Open day', onSelect: () => emit('select', item.day) },
+    { label: 'Copy post date', hint: item.day, onSelect: () => void copyText(item.day, 'Date copied.') },
   )
   ctx.openFromEvent(e, items)
 }

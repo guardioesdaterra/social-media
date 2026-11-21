@@ -172,6 +172,7 @@ export type SaveAction =
   | { action: 'delete_newsletter'; id: string }
   | { action: 'upsert_site_update'; site_update: SiteUpdateDraft }
   | { action: 'delete_site_update'; id: string }
+  | { action: 'move_item'; id: string; kind: CalendarItemKind; day: string }
 
 export type SaveActionName = SaveAction['action']
 

@@ -26,6 +26,18 @@
             />
           </div>
 
+          <!-- Scheduled time (optional) -->
+          <div>
+            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Scheduled time (optional)</label>
+            <input
+              type="time"
+              class="eg-input text-sm"
+              :value="form.scheduled_at"
+              @input="form.scheduled_at = ($event.target as HTMLInputElement).value"
+            />
+            <p class="mt-1 text-[10px] text-zinc-500">Leave blank for an all-day post.</p>
+          </div>
+
           <!-- Topic (REQUIRED) -->
           <div>
             <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Topic <span class="text-red-400">*</span></label>
@@ -161,6 +173,7 @@ const canEdit = computed(() => phase.value === 'manager')
 const form = reactive<{
   id: string
   day: string
+  scheduled_at: string | null
   topic_key: string
   format: PostFormat
   status: PostStatus
@@ -171,6 +184,7 @@ const form = reactive<{
 }>({
   id: '',
   day: '',
+  scheduled_at: null,
   topic_key: '',
   format: 'Carousel',
   status: 'planned',
@@ -201,6 +215,7 @@ function resetForm() {
   const baseDay = post ? post.day : props.day
   form.id = post?.id ?? ''
   form.day = post ? post.day : baseDay
+  form.scheduled_at = post?.scheduled_at ?? null
   form.topic_key = post?.topic_key ?? ''
   form.format = (post?.format ?? 'Carousel') as PostFormat
   form.status = (post?.status ?? 'planned') as PostStatus
@@ -246,6 +261,7 @@ async function handleSubmit() {
   const draft: any = {
     id: form.id || undefined,
     day: form.day,
+    scheduled_at: form.scheduled_at || null,
     topic_key: form.topic_key,
     format: form.format,
     status: form.status,

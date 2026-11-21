@@ -5,10 +5,12 @@
   >
     <div class="mx-auto flex h-14 max-w-[1680px] items-center gap-3 px-3 sm:px-5">
       <NuxtLink to="/calendario" class="flex items-center gap-2.5 shrink-0" aria-label="Home">
-        <span
-          class="grid h-8 w-8 place-items-center rounded-lg bg-[var(--eg-accent)] text-sm font-black text-black"
+        <img
+          src="/EG-Logo.webp"
+          alt="EG"
+          class="h-8 w-8 shrink-0"
           aria-hidden="true"
-        >EG</span>
+        />
         <span class="hidden leading-tight sm:block">
           <span class="block text-sm font-semibold text-white">Social Media</span>
           <span class="block text-[11px] text-zinc-500">Editorial calendar · @earthguardians</span>
@@ -25,7 +27,12 @@
         </NuxtLink>
       </nav>
 
-      <div class="flex-1" />
+      <div class="flex-1 flex items-center justify-center gap-2">
+        <span class="text-xs font-mono text-zinc-400 sm:text-sm" aria-label="Clock">
+          {{ formatted }}
+        </span>
+        <span v-if="!isUtc" class="text-[10px] text-zinc-500">{{ tzLabel }}</span>
+      </div>
 
       <SyncStatus v-if="isManager" />
 

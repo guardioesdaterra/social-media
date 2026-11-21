@@ -10,7 +10,7 @@
 
       <h1 class="flex-1 text-center text-base font-semibold text-white sm:text-lg">
         {{ monthLabel(year, month) }}
-        <span class="ml-1 text-sm font-normal text-zinc-500">· {{ monthPostCount }} post{{ monthPostCount === 1 ? '' : 's' }}</span>
+        <span class="ml-1 text-sm font-normal text-zinc-500">· {{ monthItemCount }} item{{ monthItemCount === 1 ? '' : 's' }}</span>
       </h1>
 
       <div class="flex items-center gap-1.5">
@@ -60,6 +60,9 @@
           :aria-pressed="cell.date === selected"
           @click="emit('select', cell.date)"
           @contextmenu.prevent="onDayContext($event, cell)"
+          @dragover.prevent="onCellDragOver($event, cell)"
+          @drop="onCellDrop($event, cell)"
+          :class="{ ...cellClasses(cell), 'ring-2 ring-[var(--eg-accent)]': dragOverCell === cell.date }"
         >
           <span class="flex items-start justify-between gap-1">
             <span
@@ -74,17 +77,23 @@
             >{{ cell.count }}</span>
           </span>
 
-          <!-- Post chips (desktop) -->
+          <!-- Item chips (desktop) -->
           <span class="mt-1 hidden flex-col gap-0.5 sm:flex">
             <span
-              v-for="p in cell.previews"
-              :key="p.id"
-              :data-post-id="p.id"
-              class="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] leading-tight"
-              :style="{ background: topicColor(p.topic_key) + '26', color: topicColor(p.topic_key) }"
+              v-for="item in cell.previews"
+              :key="item.id"
+              :data-item-id="item.id"
+              :data-item-kind="item.kind"
+              class="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] leading-tight cursor-pointer cursor-move"
+              :style="{ background: itemColor(item) + '26', color: itemColor(item), opacity: dragSource?.id === item.id ? 0.4 : 1 }"
+              draggable="true"
+              @dragstart="onItemDragStart($event, item)"
+              @dragend="onItemDragEnd"
+              @click="openItem(item)"
             >
-              <span class="h-1.5 w-1.5 shrink-0 rounded-full" :style="{ background: topicColor(p.topic_key) }" />
-              <span class="truncate text-zinc-200">{{ p.title || 'Untitled' }}</span>
+              <span class="h-1.5 w-1.5 shrink-0 rounded-full" :style="{ background: itemColor(item) }" />
+              <span class="truncate text-zinc-200">{{ item.title || '(no title)' }}</span>
+              <span v-if="item.time" class="ml-auto text-[9px] opacity-70">{{ item.time.slice(11, 16) }}</span>
             </span>
             <span v-if="cell.more > 0" class="px-1 text-[10px] text-zinc-500">+{{ cell.more }} more</span>
           </span>
@@ -92,11 +101,11 @@
           <!-- Dots (mobile) -->
           <span class="mt-1 flex flex-wrap gap-0.5 sm:hidden">
             <span
-              v-for="p in cell.previews.slice(0, 4)"
-              :key="p.id"
-              :data-post-id="p.id"
+              v-for="item in cell.previews.slice(0, 4)"
+              :key="item.id"
+              :data-item-kind="item.kind"
               class="h-1.5 w-1.5 rounded-full"
-              :style="{ background: topicColor(p.topic_key) }"
+              :style="{ background: itemColor(item) }"
             />
           </span>
         </button>
@@ -106,29 +115,28 @@
 </template>
 
 <script setup lang="ts">
-import type { CalendarPost, Topic } from '~/lib/types'
+import type { CalendarItem, Topic } from '~/lib/types'
 import type { ContextMenuEntry } from '~/composables/useContextMenu'
-import { DOW_FULL, DOW_SHORT, MONTHS } from '~/lib/types'
-import { buildMonthGrid, monthLabel, todayIso, toIsoDay, parseIsoDay, dayLabel, daysInMonth } from '~/lib/calendar'
+import { DOW_FULL, DOW_SHORT, MONTHS, itemKindColor, itemKindLabel } from '~/lib/types'
+import { buildMonthGrid, monthLabel, todayIso, parseIsoDay, toIsoDay, dayLabel, daysInMonth } from '~/lib/calendar'
+import { computed, reactive, ref, toRefs, watch } from 'vue'
 
 const props = defineProps<{
   cursor: string
   selected: string
-  postsByDay: Map<string, CalendarPost[]>
+  itemsByDay: Map<string, CalendarItem[]>
   topics: readonly Topic[]
 }>()
 
-const emit = defineEmits<{
+type CalendarMonthEmits = {
   select: [day: string]
-  /** Parent owns the cursor — mirrored when the toolbar navigates months. */
   cursor: [iso: string]
-  /** Ask the parent to open the post editor pre-filled with `day`. */
   'new-post': [day: string]
-  /** Ask the parent to open the editor for an existing post. */
-  'edit-post': [post: CalendarPost]
-  /** Switch the page to week view around `day`. */
+  'edit-item': [item: CalendarItem]
   'view-week': [day: string]
-}>()
+}
+
+const emit = defineEmits<CalendarMonthEmits>()
 
 const toast = useToast()
 const auth = useSupabaseAuth()
@@ -159,11 +167,14 @@ const years = computed(() => {
 
 const grid = computed(() => buildMonthGrid(year.value, month.value))
 
-const monthPostCount = computed(() => {
+const monthItemCount = computed(() => {
   let n = 0
-  const postsByDay = props.postsByDay || new Map<string, CalendarPost[]>()
-  for (const list of postsByDay.values()) {
-    for (const p of list) if (p.year === year.value && p.month === month.value) n++
+  const itemsByDay = props.itemsByDay || new Map<string, CalendarItem[]>()
+  const monthKey = `${String(year.value).padStart(4, '0')}-${String(month.value).padStart(2, '0')}`
+  for (const list of itemsByDay.values()) {
+    for (const item of list) {
+      if (item.day.slice(0, 7) === monthKey) n++
+    }
   }
   return n
 })
@@ -178,30 +189,35 @@ function topicColor(key: string): string {
   return topicMap.value.get(key)?.color || '#71717a'
 }
 
+function itemColor(item: CalendarItem): string {
+  if (item.kind === 'post') return topicColor(item.post.topic_key)
+  return itemKindColor(item.kind)
+}
+
 interface CellView {
   date: string
   day: number
   weekday: number
   adjacent: boolean
   count: number
-  previews: CalendarPost[]
+  previews: CalendarItem[]
   more: number
   aria: string
 }
 
-const cellsView = computed<CellView[]>(() =>
-  grid.value.cells.map((c) => {
-    const postsByDay = props.postsByDay || new Map<string, CalendarPost[]>()
-    const list = postsByDay.get(c.date) || []
+const cellsView = computed<CellView[]>(() => {
+  const itemsByDay = props.itemsByDay || new Map<string, CalendarItem[]>()
+  return grid.value.cells.map((c) => {
+    const list = itemsByDay.get(c.date) || []
     return {
       ...c,
       count: list.length,
       previews: list.slice(0, 3),
       more: Math.max(0, list.length - 3),
-      aria: `${c.date}, ${list.length} post${list.length === 1 ? '' : 's'}`,
+      aria: `${c.date}, ${list.length} item${list.length === 1 ? '' : 's'}`,
     }
-  }),
-)
+  })
+})
 
 const weeksView = computed(() => {
   const all = cellsView.value
@@ -211,6 +227,9 @@ const weeksView = computed(() => {
 })
 
 const today = todayIso()
+
+const dragSource = ref<{ id: string; kind: string } | null>(null)
+const dragOverCell = ref<string | null>(null)
 
 function cellClasses(cell: CellView) {
   return {
@@ -229,18 +248,27 @@ function dayNumberClass(cell: CellView) {
   return 'text-zinc-300'
 }
 
-/** Right-click on a day cell (or one of its post chips) → contextual actions. */
+/** Open the right editor for a calendar item kind. */
+function openItem(item: CalendarItem) {
+  if (item.kind === 'post') {
+    emit('edit-item', item)
+    return
+  }
+  emit('edit-item', item)
+}
+
+/** Right-click on a day cell → contextual actions. */
 function onDayContext(e: MouseEvent, cell: CellView) {
   const target = e.target as HTMLElement
-  const chip = target.closest('[data-post-id]') as HTMLElement | null
-  const post = chip
-    ? (props.postsByDay?.get(cell.date) || []).find((p) => p.id === chip.dataset.postId)
+  const chip = target.closest('[data-item-id]') as HTMLElement | null
+  const item = chip
+    ? (props.itemsByDay?.get(cell.date) || []).find((i) => i.id === chip.dataset.itemId)
     : null
 
-  if (post) {
+  if (item) {
     const items: ContextMenuEntry[] = [
-      { label: 'Edit post', onSelect: () => emit('edit-post', post) },
-      { label: 'Copy title', onSelect: () => void copyText(post.title || 'Untitled', 'Title copied.') },
+      { label: `Edit ${itemKindLabel(item.kind)}`, onSelect: () => emit('edit-item', item) },
+      { label: 'Copy title', onSelect: () => void copyText(item.title || 'Untitled', 'Title copied.') },
       { type: 'separator' },
       { label: 'New post on this day', onSelect: () => emit('new-post', cell.date) },
       { label: 'Open day', onSelect: () => emit('select', cell.date) },
@@ -294,7 +322,6 @@ function go(y: number, m: number) {
 }
 
 function emitCursor(iso: string) {
-  // Parent owns the cursor; mirror local nav through the selected day.
   emit('cursor', iso)
 }
 
@@ -303,6 +330,34 @@ function goToday() {
   year.value = t.year
   month.value = t.month
   emitCursor(today)
+}
+
+/** Drag: item chip picked up. */
+function onItemDragStart(e: DragEvent, item: CalendarItem) {
+  dragSource.value = { id: item.id, kind: item.kind }
+  e.dataTransfer?.setData('application/json', JSON.stringify({ id: item.id, kind: item.kind, day: item.day }))
+  e.dataTransfer!.effectAllowed = 'move'
+}
+
+/** Drag: item chip released. */
+function onItemDragEnd() {
+  dragSource.value = null
+}
+
+/** Drag: over a day cell. */
+function onCellDragOver(e: DragEvent, cell: CellView) {
+  e.preventDefault()
+  e.dataTransfer!.dropEffect = 'move'
+  dragOverCell.value = cell.date
+}
+
+/** Drag: dropped onto a day cell → move the item. */
+function onCellDrop(_e: DragEvent, cell: CellView) {
+  if (!dragSource.value) return
+  dragOverCell.value = null
+  if (dragSource.value.day === cell.date) return
+  emit('move-item', dragSource.value.id, dragSource.value.kind, cell.date)
+  dragSource.value = null
 }
 
 function onYear(e: Event) {

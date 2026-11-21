@@ -9,6 +9,7 @@
  */
 import type { SiteUpdate, SiteUpdateDraft, SiteUpdateStatus } from '~/lib/types'
 import { useSupabase, edgeFunctionUrl } from '~/lib/supabase'
+import { isMock, useMockCalendar } from '~/lib/mock'
 import { ref, computed, readonly } from 'vue'
 
 const siteUpdates = ref<SiteUpdate[]>([])
@@ -26,6 +27,8 @@ export function useSiteUpdates() {
   const supabase = useSupabase()
   const toast = useToast()
   const { session } = useSupabaseAuth()
+  const mock = isMock()
+  const mCalendar = useMockCalendar()
 
   const byId = computed(() => {
     const map = new Map<string, SiteUpdate>()
@@ -90,6 +93,12 @@ export function useSiteUpdates() {
     loading.value = true
     loadError.value = null
     try {
+      if (mock) {
+        siteUpdates.value = mCalendar.loadSiteUpdates()
+        loaded.value = true
+        lastSync.value = new Date()
+        return
+      }
       const data = await fn<{
         ok: boolean
         site_updates: SiteUpdate[]
@@ -123,6 +132,16 @@ export function useSiteUpdates() {
   }): Promise<{ ok: boolean; site_update?: SiteUpdate; error?: string }> {
     saving.value = true
     try {
+      if (mock) {
+        if (action.action === 'delete_site_update') {
+          mCalendar.deleteSiteUpdate(action.id!)
+          lastSync.value = new Date()
+          return { ok: true }
+        }
+        const row = mCalendar.saveSiteUpdate(action.site_update!)
+        lastSync.value = new Date()
+        return { ok: true, site_update: row }
+      }
       const result = await fn<{
         ok: boolean
         site_update?: SiteUpdate
@@ -149,7 +168,7 @@ export function useSiteUpdates() {
   const deleteSiteUpdate = (id: string) => save({ action: 'delete_site_update', id })
 
   function connectRealtime(): () => void {
-    if (!import.meta.client || channel) return () => {}
+    if (mock || !import.meta.client || channel) return () => {}
 
     channel = supabase
       .channel(`site-updates-sync-${Date.now()}`)
@@ -191,7 +210,7 @@ export function useSiteUpdates() {
     await auth.bootstrap()
     if (!auth.isManager.value) return
     await load(true)
-    connectRealtime()
+    if (!mock) connectRealtime()
   }
 
   return {

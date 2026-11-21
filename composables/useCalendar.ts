@@ -1,4 +1,5 @@
 import type {
+  CalendarItemKind,
   CalendarPost,
   CalendarSnapshot,
   PostDraft,
@@ -236,6 +237,8 @@ export function useCalendar() {
   const setAttention = (items: { key: string; attention_rank: number | null }[]) =>
     save({ action: 'set_attention', items })
   const saveSetting = (key: string, value: unknown) => save({ action: 'upsert_setting', key, value })
+  const moveItem = (id: string, kind: CalendarItemKind, day: string) =>
+    save({ action: 'move_item', id, kind, day })
 
   /** Subscribes to the calendar tables so every open tab stays live. */
   function connectRealtime(): () => void {
@@ -328,5 +331,6 @@ export function useCalendar() {
     connectRealtime,
     init,
     session,
+    moveItem,
   }
 }

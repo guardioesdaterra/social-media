@@ -9,6 +9,7 @@
  */
 import type { Newsletter, NewsletterDraft, NewsletterStatus } from '~/lib/types'
 import { useSupabase, edgeFunctionUrl } from '~/lib/supabase'
+import { isMock, useMockCalendar } from '~/lib/mock'
 import { ref, computed, readonly } from 'vue'
 
 const newsletters = ref<Newsletter[]>([])
@@ -26,6 +27,8 @@ export function useNewsletters() {
   const supabase = useSupabase()
   const toast = useToast()
   const { session } = useSupabaseAuth()
+  const mock = isMock()
+  const mCalendar = useMockCalendar()
 
   const byId = computed(() => {
     const map = new Map<string, Newsletter>()
@@ -90,6 +93,12 @@ export function useNewsletters() {
     loading.value = true
     loadError.value = null
     try {
+      if (mock) {
+        newsletters.value = mCalendar.loadNewsletters()
+        loaded.value = true
+        lastSync.value = new Date()
+        return
+      }
       const data = await fn<{ ok: boolean; newsletters: Newsletter[]; server_time: string }>(
         'newsletter-get',
         { method: 'GET' },
@@ -122,6 +131,16 @@ export function useNewsletters() {
   }): Promise<{ ok: boolean; newsletter?: Newsletter; error?: string }> {
     saving.value = true
     try {
+      if (mock) {
+        if (action.action === 'delete_newsletter') {
+          mCalendar.deleteNewsletter(action.id!)
+          lastSync.value = new Date()
+          return { ok: true }
+        }
+        const row = mCalendar.saveNewsletter(action.newsletter!)
+        lastSync.value = new Date()
+        return { ok: true, newsletter: row }
+      }
       const result = await fn<{
         ok: boolean
         newsletter?: Newsletter
@@ -148,7 +167,7 @@ export function useNewsletters() {
   const deleteNewsletter = (id: string) => save({ action: 'delete_newsletter', id })
 
   function connectRealtime(): () => void {
-    if (!import.meta.client || channel) return () => {}
+    if (mock || !import.meta.client || channel) return () => {}
 
     channel = supabase
       .channel(`newsletters-sync-${Date.now()}`)
@@ -190,7 +209,7 @@ export function useNewsletters() {
     await auth.bootstrap()
     if (!auth.isManager.value) return
     await load(true)
-    connectRealtime()
+    if (!mock) connectRealtime()
   }
 
   return {
