@@ -120,8 +120,9 @@ export function useSupabaseAuth() {
   }
 
   function callbackUrl(): string {
-    const base = import.meta.env.BASE_URL || '/'
-    return `${window.location.origin}${base}auth/callback`
+    const cfg = useRuntimeConfig()
+    const base = cfg.app.baseURL || import.meta.env.BASE_URL || '/'
+    return `${window.location.origin}${base.replace(/\/$/, '')}/auth/callback`
   }
 
   async function signInWithGoogle(): Promise<string | null> {
