@@ -88,7 +88,7 @@
       </div>
 
       <div v-if="groupedDays.length === 0" class="px-3 py-12 text-center">
-        <p class="text-xs text-zinc-500">No items scheduled.</p>
+        <p class="text-xs text-zinc-500">{{ emptyMessage }}</p>
       </div>
     </div>
   </section>
@@ -105,7 +105,10 @@ const props = defineProps<{
   itemsByDay: Map<string, CalendarItem[]>
   topics: readonly Topic[]
   selected: string
+  emptyText?: string
 }>()
+
+const emptyMessage = computed(() => props.emptyText ?? 'No items scheduled.')
 
 const emit = defineEmits<{
   select: [day: string]

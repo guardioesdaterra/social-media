@@ -26,7 +26,7 @@
         </div>
 
         <h1 class="flex-1 text-center text-sm font-semibold text-white sm:text-base">
-          {{ monthLabel(cursorYear, cursorMonth) }}
+          {{ pageTitle }}
         </h1>
 
         <div class="flex items-center gap-2">
@@ -57,34 +57,36 @@
 
           <div class="flex items-center gap-1">
             <span class="text-[10px] text-zinc-500 shrink-0">Filter</span>
-            <button
-              class="px-2 py-1 text-xs rounded transition"
-              :class="{ 'bg-white/20 text-white': filter === 'all' }"
-              @click="filter = 'all'"
-            >
-              All
-            </button>
-            <button
-              class="px-2 py-1 text-xs rounded transition"
-              :class="{ 'bg-white/20 text-white': filter === 'posts' }"
-              @click="filter = 'posts'"
-            >
-              Posts
-            </button>
-            <button
-              class="px-2 py-1 text-xs rounded transition"
-              :class="{ 'bg-white/20 text-white': filter === 'newsletters' }"
-              @click="filter = 'newsletters'"
-            >
-              Newsletters
-            </button>
-            <button
-              class="px-2 py-1 text-xs rounded transition"
-              :class="{ 'bg-white/20 text-white': filter === 'site_updates' }"
-              @click="filter = 'site_updates'"
-            >
-              Site updates
-            </button>
+            <div class="inline-flex border border-[var(--eg-border)] rounded-lg bg-[var(--eg-panel-2)]">
+              <button
+                class="px-2 py-1 text-xs rounded transition"
+                :class="{ 'bg-white/20 text-white': filter === 'all' }"
+                @click="filter = 'all'"
+              >
+                All
+              </button>
+              <button
+                class="px-2 py-1 text-xs rounded transition"
+                :class="{ 'bg-white/20 text-white': filter === 'posts' }"
+                @click="filter = 'posts'"
+              >
+                Posts
+              </button>
+              <button
+                class="px-2 py-1 text-xs rounded transition"
+                :class="{ 'bg-white/20 text-white': filter === 'newsletters' }"
+                @click="filter = 'newsletters'"
+              >
+                Newsletters
+              </button>
+              <button
+                class="px-2 py-1 text-xs rounded transition"
+                :class="{ 'bg-white/20 text-white': filter === 'site_updates' }"
+                @click="filter = 'site_updates'"
+              >
+                Site updates
+              </button>
+            </div>
           </div>
 
           <button
@@ -95,9 +97,7 @@
             Topics
           </button>
 
-          <button class="eg-btn-ghost !px-2.5 !py-1.5 text-xs shrink-0" @click="onSignOut">
-            Sign out
-          </button>
+          <CreateMenu :day="cursor" @create="onCreate" />
         </div>
       </header>
 
@@ -137,6 +137,8 @@
             @select="setCursor"
             @cursor="onChildCursor"
             @new-post="onNewPost"
+            @new-newsletter="onNewNewsletter"
+            @new-site-update="onNewSiteUpdate"
             @edit-item="openItemEditor"
             @view-week="onViewWeek"
             @move-item="moveCalendarItem"
@@ -150,6 +152,8 @@
             @select="setCursor"
             @edit-item="openItemEditor"
             @new-post="onNewPost"
+            @new-newsletter="onNewNewsletter"
+            @new-site-update="onNewSiteUpdate"
             @view-month="onViewMonth"
             @move-item="moveCalendarItem"
           />
@@ -158,6 +162,7 @@
             :items-by-day="filteredItemsByDay"
             :topics="topics"
             :selected="cursor"
+            :empty-text="listEmptyText"
             @select="setCursor"
             @edit-item="openItemEditor"
             @move-item="moveCalendarItem"
@@ -180,7 +185,7 @@
               :day="cursor"
               :items="dayItems"
               :topics="topics"
-              @add="openEditor"
+              @create="onCreate"
               @edit-item="openItemEditor"
               @delete="deletePost"
               @save="savePost"
@@ -215,20 +220,14 @@
               <h2 class="text-sm font-semibold text-white truncate flex-1">
                 {{ dayLabel(cursor) }}
               </h2>
-              <button
-                class="eg-btn-primary !px-3 !py-1.5 text-xs shrink-0"
-                :disabled="!isManager"
-                @click="openEditor()"
-              >
-                + Add post
-              </button>
+              <CreateMenu :day="cursor" @create="onCreate" />
             </div>
             <div class="flex-1 overflow-y-auto p-3">
               <DayPanel
                 :day="cursor"
                 :items="dayItems"
                 :topics="topics"
-                @add="openEditor"
+                @create="onCreate"
                 @edit-item="openItemEditor"
                 @delete="deletePost"
                 @save="savePost"
@@ -275,7 +274,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useWindowSize } from '@vueuse/core'
 import { parseIsoDay, todayIso, weekOf, monthLabel, dayLabel, daysInMonth } from '~/lib/calendar'
-import type { CalendarItem, CalendarPost } from '~/lib/types'
+import type { CalendarItem, CalendarPost, CalendarItemKind } from '~/lib/types'
 import { makeCalendarItem } from '~/lib/types'
 
 import AuthGate from '~/components/AuthGate.vue'
@@ -284,6 +283,7 @@ import CalendarWeek from '~/components/CalendarWeek.vue'
 import CalendarList from '~/components/CalendarList.vue'
 import DayPanel from '~/components/DayPanel.vue'
 import TopicsPanel from '~/components/TopicsPanel.vue'
+import CreateMenu from '~/components/CreateMenu.vue'
 import PostEditor from '~/components/PostEditor.vue'
 import NewsletterEditor from '~/components/NewsletterEditor.vue'
 import SiteUpdateEditor from '~/components/SiteUpdateEditor.vue'
@@ -348,10 +348,35 @@ const editorNewsletter = ref<import('~/lib/types').Newsletter | null>(null)
 const siteUpdateEditorOpen = ref(false)
 const editorSiteUpdate = ref<import('~/lib/types').SiteUpdate | null>(null)
 
+const createKind = ref<CalendarItemKind>('post')
+const createOpen = ref(false)
+
 const cursorYear = computed(() => parseIsoDay(cursor.value).year)
 const cursorMonth = computed(() => parseIsoDay(cursor.value).month)
 
 const weekDays = computed(() => weekOf(cursor.value))
+
+/** Page title that includes item count per view. */
+const pageTitle = computed(() => {
+  const base = view.value === 'month'
+    ? monthLabel(cursorYear.value, cursorMonth.value)
+    : view.value === 'week'
+      ? weekDays.value.length
+        ? `${monthLabel(parseIsoDay(weekDays.value[0]!).month - 1 || 12, parseIsoDay(weekDays.value[0]!).year)} (Week of ${weekDays.value[0]})`
+        : ''
+      : monthLabel(cursorYear.value, cursorMonth.value)
+  const count = filteredItemsByDay.value.size
+  return count > 0 ? `${base} · ${count} item${count === 1 ? '' : 's'}` : base
+})
+
+/** Filter-aware empty message for the list view. */
+const listEmptyText = computed(() => {
+  if (filter.value === 'all') return 'No items scheduled.'
+  if (filter.value === 'posts') return 'No posts scheduled.'
+  if (filter.value === 'newsletters') return 'No newsletters scheduled.'
+  if (filter.value === 'site_updates') return 'No site updates scheduled.'
+  return 'No items scheduled.'
+})
 
 const dayItems = computed(() => filteredItemsByDay.value.get(cursor.value) || [])
 
@@ -414,7 +439,21 @@ function onChildCursor(iso: string) {
 
 function onNewPost(day: string) {
   cursor.value = day
-  openEditor()
+  createKind.value = 'post'
+  editorPost.value = null
+  editorOpen.value = true
+}
+
+function onNewNewsletter(day: string) {
+  cursor.value = day
+  editorNewsletter.value = null
+  newsletterEditorOpen.value = true
+}
+
+function onNewSiteUpdate(day: string) {
+  cursor.value = day
+  editorSiteUpdate.value = null
+  siteUpdateEditorOpen.value = true
 }
 
 function onViewWeek(day: string) {
@@ -480,7 +519,6 @@ function shift(delta: number) {
 
 function goToday() {
   cursor.value = todayIso()
-  if (!isDesktop.value) showSheet.value = true
 }
 
 function navDisabled(delta: number): boolean {
@@ -497,6 +535,21 @@ function navDisabled(delta: number): boolean {
 function openEditor(post?: CalendarPost) {
   editorPost.value = post ?? null
   editorOpen.value = true
+}
+
+/** Open the right editor for creating a new event of the given kind on the cursor day. */
+function onCreate(kind: CalendarItemKind) {
+  createKind.value = kind
+  if (kind === 'post') {
+    editorPost.value = null
+    editorOpen.value = true
+  } else if (kind === 'newsletter') {
+    editorNewsletter.value = null
+    newsletterEditorOpen.value = true
+  } else {
+    editorSiteUpdate.value = null
+    siteUpdateEditorOpen.value = true
+  }
 }
 
 async function savePost(draft: any) {

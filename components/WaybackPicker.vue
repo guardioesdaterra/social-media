@@ -155,9 +155,10 @@ const { capturing, error: captureError, lastResult: captureResult, capture } = u
 const wayback = useWayback()
 
 const formatDateRange = computed(() => {
-  if (snapshots.value.length === 0) return ''
-  const first = snapshots.value[snapshots.value.length - 1]
-  const last = snapshots.value[0]
+  const items = snapshots.value
+  const first = items[items.length - 1]
+  const last = items[0]
+  if (!first || !last) return ''
   return `${formatDate(first.timestamp)} → ${formatDate(last.timestamp)}`
 })
 

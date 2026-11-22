@@ -23,4 +23,4 @@ secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
 redirect_uri = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_REDIRECT_URI)"
 
 [edge_functions]
-verify_jwt = false
+verify_jwt = true

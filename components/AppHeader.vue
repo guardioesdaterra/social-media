@@ -25,11 +25,28 @@
         >
           Calendar
         </NuxtLink>
+        <NuxtLink
+          to="/newsletters"
+          class="rounded-lg px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
+          :class="{ 'bg-white/10 text-white': $route.path.startsWith('/newsletters') }"
+        >
+          Newsletters
+        </NuxtLink>
+        <NuxtLink
+          to="/site-updates"
+          class="rounded-lg px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
+          :class="{ 'bg-white/10 text-white': $route.path.startsWith('/site-updates') }"
+        >
+          Site updates
+        </NuxtLink>
       </nav>
 
       <div class="flex-1 flex items-center justify-center gap-2">
-        <span class="text-xs font-mono text-zinc-400 sm:text-sm" aria-label="Clock">
+        <span class="hidden sm:inline text-xs font-mono text-zinc-400 sm:text-sm whitespace-nowrap tabular-nums" aria-label="Clock">
           {{ formatted }}
+        </span>
+        <span class="sm:hidden text-xs font-mono text-zinc-400 whitespace-nowrap tabular-nums" aria-label="Clock">
+          {{ timeOnly }}
         </span>
         <span v-if="!isUtc" class="text-[10px] text-zinc-500">{{ tzLabel }}</span>
       </div>
@@ -49,7 +66,7 @@
         >
           {{ manager.email }}
         </span>
-        <button class="eg-btn-ghost !px-3 !py-1.5 text-xs" @click="onSignOut">Sign out</button>
+        <button class="eg-btn-ghost !px-3 !py-1.5 text-xs whitespace-nowrap" @click="onSignOut">Sign out</button>
       </div>
 
       <NuxtLink v-else-if="phase === 'anonymous' || phase === 'denied'" to="/login" class="eg-btn-primary !py-1.5 text-xs">

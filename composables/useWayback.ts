@@ -159,24 +159,31 @@ export function useWayback() {
     let i = 0, j = 0, k = 0
     
     while (i < oldLines.length || j < newLines.length) {
-      if (k < lcs.length && i < oldLines.length && oldLines[i] === lcs[k] && j < newLines.length && newLines[j] === lcs[k]) {
+      const oldLine = oldLines[i]
+      const newLine = newLines[j]
+      const lcsLine = lcs[k]
+      if (
+        k < lcs.length &&
+        oldLine !== undefined && oldLine === lcsLine &&
+        newLine !== undefined && newLine === lcsLine
+      ) {
         unchanged++
         i++
         j++
         k++
-      } else if (i < oldLines.length && (k >= lcs.length || oldLines[i] !== lcs[k])) {
-        const chunk: DiffChunk = { value: oldLines[i], count: 1 }
+      } else if (oldLine !== undefined && (k >= lcs.length || oldLine !== lcsLine)) {
+        const chunk: DiffChunk = { value: oldLine, count: 1 }
         const last = deletions[deletions.length - 1]
-        if (last && last.value === oldLines[i]) {
+        if (last && last.value === oldLine) {
           last.count++
         } else {
           deletions.push(chunk)
         }
         i++
-      } else if (j < newLines.length && (k >= lcs.length || newLines[j] !== lcs[k])) {
-        const chunk: DiffChunk = { value: newLines[j], count: 1 }
+      } else if (newLine !== undefined && (k >= lcs.length || newLine !== lcsLine)) {
+        const chunk: DiffChunk = { value: newLine, count: 1 }
         const last = additions[additions.length - 1]
-        if (last && last.value === newLines[j]) {
+        if (last && last.value === newLine) {
           last.count++
         } else {
           additions.push(chunk)
@@ -202,11 +209,14 @@ export function useWayback() {
     const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0))
     
     for (let i = 1; i <= m; i++) {
+      const row = dp[i]
+      const prevRow = dp[i - 1]
+      if (!row || !prevRow) continue
       for (let j = 1; j <= n; j++) {
         if (a[i - 1] === b[j - 1]) {
-          dp[i][j] = dp[i - 1][j - 1] + 1
+          row[j] = (prevRow[j - 1] ?? 0) + 1
         } else {
-          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1])
+          row[j] = Math.max(prevRow[j] ?? 0, row[j - 1] ?? 0)
         }
       }
     }
@@ -215,11 +225,13 @@ export function useWayback() {
     const result: string[] = []
     let i = m, j = n
     while (i > 0 && j > 0) {
-      if (a[i - 1] === b[j - 1]) {
-        result.unshift(a[i - 1])
+      const ai = a[i - 1]
+      const bj = b[j - 1]
+      if (ai !== undefined && ai === bj) {
+        result.unshift(ai)
         i--
         j--
-      } else if (dp[i - 1][j] > dp[i][j - 1]) {
+      } else if ((dp[i - 1]?.[j] ?? 0) > (dp[i]?.[j - 1] ?? 0)) {
         i--
       } else {
         j--
@@ -242,9 +254,9 @@ export function useWayback() {
     const text2 = extractText(content2)
 
     return {
+      ...computeTextDiff(text1, text2),
       from: timestamp1,
       to: timestamp2,
-      ...computeTextDiff(text1, text2),
     }
   }
 

@@ -1,62 +1,45 @@
 <template>
   <section class="eg-card overflow-hidden" aria-label="Week calendar">
-    <!-- Toolbar -->
-    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--eg-border)] px-3 py-2.5 sm:px-4">
-      <div class="flex items-center gap-1">
-        <button class="eg-btn-ghost !px-2.5 !py-1.5" aria-label="Previous week" @click="shift(-1)">‹</button>
-        <button class="eg-btn-ghost !px-2.5 !py-1.5" aria-label="Next week" @click="shift(1)">›</button>
-        <button class="eg-btn-ghost !px-3 !py-1.5 text-xs font-medium" @click="goToday">Today</button>
-      </div>
-
-      <h1 class="flex-1 text-center text-sm font-semibold text-white sm:text-base">
-        {{ weekLabel }}
-      </h1>
-
-      <div class="flex items-center gap-1">
-        <button
-          class="eg-btn-ghost !px-2.5 !py-1.5 text-xs shrink-0"
-          @click="$emit('select', selected)"
-        >
-          Day panel
-        </button>
-      </div>
-    </div>
-
     <!-- Week grid -->
     <div class="grid grid-cols-7 border-t border-[var(--eg-border)]">
       <div
         v-for="(day, i) in week"
         :key="day"
-        class="border-r border-[var(--eg-border)] last:border-r-0 p-2"
+        class="border-r border-[var(--eg-border)] last:border-r-0 p-2 cursor-pointer"
+        :class="{ 'bg-white/[0.03]': isSelected(day) }"
+        @click="$emit('select', day)"
         @contextmenu.prevent="onDayContext($event, day)"
         @dragover.prevent="onColDragOver($event, day)"
         @drop="onColDrop($event, day)"
-        :class="{ 'ring-2 ring-[var(--eg-accent)]': dragOverCol === day }"
+        :style="{ '--tw-ring-shadow': dragOverCol === day ? '0 0 0 2px var(--eg-accent)' : '0 0 #0000' }"
       >
+        <!-- Day header -->
         <div class="flex items-center justify-between mb-2">
           <div>
             <div class="text-[10px] font-semibold uppercase tracking-wider" :class="dowClass(day)">{{ dowShort(day) }}</div>
             <div class="text-xs font-medium" :class="dayClasses(day)">{{ parseIsoDay(day).day }}</div>
           </div>
           <button
-            v-if="isSelected(day)"
+            v-if="isToday(day)"
             class="h-5 w-5 rounded-full bg-[var(--eg-accent)] text-black text-[10px] font-bold"
             aria-label="Today"
+            @click.stop="$emit('select', day)"
           />
         </div>
 
-        <div class="space-y-1.5 min-h-[200px]">
+        <!-- Items -->
+        <div class="space-y-1.5 min-h-[120px]">
           <div
             v-for="item in itemsFor(day)"
             :key="item.id"
-            class="border flex items-start gap-1.5 rounded px-2 py-1.5 text-[10px] cursor-move"
+            class="border flex items-start gap-1.5 rounded px-2 py-1.5 text-[10px] cursor-move group"
             :style="{ background: itemColor(item) + '12', borderColor: itemColor(item) + '33', opacity: dragSource?.id === item.id ? 0.4 : 1 }"
             draggable="true"
-            @dragstart="onItemDragStart($event, item)"
-            @dragend="onItemDragEnd"
+            @dragstart.stop="onItemDragStart($event, item)"
+            @dragend.stop="onItemDragEnd"
             @contextmenu.stop.prevent="onItemContext($event, item)"
             @dragover.prevent
-            @drop="onItemDrop($event, item, day)"
+            @drop.stop="onItemDrop($event, item, day)"
             :class="{ 'ring-1 ring-[var(--eg-accent)]': dragOver === item.id }"
           >
             <span class="shrink-0 h-3 w-3 rounded-full" :style="{ background: itemColor(item) }" />
@@ -69,41 +52,16 @@
               <span v-if="item.time" class="block mt-0.5 text-[9px] opacity-70">{{ item.time.slice(11, 16) }}</span>
             </div>
             <button
-              class="ml-auto shrink-0 eg-btn-ghost !px-1 !py-0.5 text-[9px] text-zinc-400 hover:text-white"
-              @click="$emit('edit-item', item)"
+              class="ml-auto shrink-0 eg-btn-ghost !px-1 !py-0.5 text-[9px] text-zinc-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              @click.stop="$emit('edit-item', item)"
             >
               Edit
             </button>
           </div>
 
-          <div v-if="itemsFor(day).length === 0" class="h-4 flex items-center justify-center">
+          <div v-if="itemsFor(day).length === 0" class="h-full flex items-center justify-center">
             <span class="text-[9px] text-zinc-600">—</span>
           </div>
-        </div>
-
-        <div class="mt-2 flex gap-1">
-          <button
-            v-if="i > 0"
-            class="flex-1 eg-btn-ghost !px-1 !py-1 text-[9px] text-zinc-400 hover:text-white"
-            title="Move posts to previous day"
-            @click="moveDay(day, -1)"
-          >
-            ← day
-          </button>
-          <button
-            v-if="i < week.length - 1"
-            class="flex-1 eg-btn-ghost !px-1 !py-1 text-[9px] text-zinc-400 hover:text-white"
-            title="Move posts to next day"
-            @click="moveDay(day, 1)"
-          >
-            day →
-          </button>
-          <button
-            class="flex-1 eg-btn-ghost !px-1 !py-1 text-[9px] text-zinc-400 hover:text-white"
-            @click="$emit('select', day)"
-          >
-            Panel
-          </button>
         </div>
       </div>
     </div>
@@ -117,6 +75,7 @@ import {
   parseIsoDay,
   addDays,
   dayLabel,
+  todayIso,
 } from '~/lib/calendar'
 import { computed, ref } from 'vue'
 import { itemKindColor, itemKindLabel } from '~/lib/types'
@@ -132,6 +91,8 @@ const emit = defineEmits<{
   select: [day: string]
   'edit-item': [item: CalendarItem]
   'new-post': [day: string]
+  'new-newsletter': [day: string]
+  'new-site-update': [day: string]
   'view-month': [day: string]
   'move-item': [id: string, kind: string, day: string]
 }>()
@@ -185,10 +146,6 @@ function itemsFor(day: string): CalendarItem[] {
   return [...list].sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '') || a.title.localeCompare(b.title))
 }
 
-function dayPosts(day: string): CalendarItem[] {
-  return props.itemsByDay.get(day) || []
-}
-
 function dowShort(iso: string): string {
   return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseIsoDay(iso).weekday] ?? 'Sun'
 }
@@ -209,36 +166,8 @@ function isSelected(iso: string): boolean {
   return iso === props.selected
 }
 
-const weekLabel = computed(() => {
-  const days = props.week
-  if (!days.length) return ''
-  const a = parseIsoDay(days[0]!)
-  const b = parseIsoDay(days[days.length - 1]!)
-  const left = `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][a.month - 1]} ${a.day}`
-  const right = a.year === b.year ? `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][b.month - 1]} ${b.day}, ${b.year}` : `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][b.month - 1]} ${b.day}, ${b.year}`
-  return `${left} – ${right}`
-})
-
-function shift(delta: number) {
-  const first = props.week[0]!
-  const p = parseIsoDay(first)
-  const start = addDays(p.day ? `${String(p.year).padStart(4, '0')}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}` : first, delta * 7)
-  emit('select', start)
-}
-
-function goToday() {
-  const n = new Date()
-  const t = `${String(n.getFullYear()).padStart(4, '0')}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
-  emit('select', t)
-}
-
-function moveDay(day: string, delta: number) {
-  const list = dayPosts(day)
-  if (list.length === 0) return
-  const target = addDays(day, delta)
-  list.forEach((p) => {
-    if (p.kind === 'post') emit('edit-item', { ...p, post: { ...p.post, day: target } })
-  })
+function isToday(iso: string): boolean {
+  return iso === todayIso()
 }
 
 /** Drag: item picked up. */
@@ -283,12 +212,16 @@ function onColDrop(_e: DragEvent, day: string) {
 function onDayContext(e: MouseEvent, day: string) {
   const items: ContextMenuEntry[] = [{ label: 'Open day', onSelect: () => emit('select', day) }]
   if (isManager.value) {
-    items.push({ label: 'New post on this day', onSelect: () => emit('new-post', day) })
+    items.push(
+      { label: 'New post on this day', onSelect: () => emit('new-post', day) },
+      { label: 'New newsletter on this day', onSelect: () => emit('new-newsletter', day) },
+      { label: 'New site update on this day', onSelect: () => emit('new-site-update', day) },
+    )
   }
   items.push(
     { type: 'separator' },
     { label: 'View month', onSelect: () => emit('view-month', day) },
-    { label: 'Go to today', onSelect: () => goToday() },
+    { label: 'Go to today', onSelect: () => emit('select', todayIso()) },
     { type: 'separator' },
     { label: 'Copy date', onSelect: () => void copyText(dayLabel(day), 'Date copied.') },
     { label: 'Copy ISO date', hint: day, onSelect: () => void copyText(day, 'Date copied.') },

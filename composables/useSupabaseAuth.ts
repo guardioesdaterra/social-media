@@ -155,12 +155,19 @@ export function useSupabaseAuth() {
       return null
     }
     try {
+      // We request the gmail.send scope so the app can send tag-notification
+      // emails through the signed-in manager's own @earthguardians.org Gmail
+      // account via the Gmail REST API (using provider_token).
+      // `access_type: 'offline'` + `prompt: 'consent'` are required to
+      // receive a refresh_token so we can re-authorise after the 1-hour
+      // provider_token expiry.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: callbackUrl(),
+          scopes: 'openid email profile https://www.googleapis.com/auth/gmail.send',
           queryParams: {
-            prompt: 'select_account',
+            prompt: 'consent',
             access_type: 'offline',
           },
         },

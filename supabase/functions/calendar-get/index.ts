@@ -8,11 +8,11 @@
  * GET /functions/v1/calendar-get
  * Auth: Bearer <access token of an @earthguardians.org account>
  */
-import { fail, json } from '../_shared/cors.ts'
+import { corsHeaders, fail, json } from '../_shared/cors.ts'
 import { getVersion, requireManager } from '../_shared/auth.ts'
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors(req) })
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) })
 
   if (req.method !== 'GET') return fail('Method not allowed', 405, req)
 
@@ -66,16 +66,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     req,
   )
 })
-
-function cors(req: Request): Record<string, string> {
-  return {
-    'Access-Control-Allow-Origin': req.headers.get('origin') || 'https://guardioesdaterra.github.io',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, origin',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Max-Age': '86400',
-    Vary: 'Origin',
-  }
-}
 
 async function adminClient() {
   const url = Deno.env.get('SUPABASE_URL') ?? ''

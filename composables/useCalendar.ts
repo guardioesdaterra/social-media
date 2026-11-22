@@ -300,7 +300,12 @@ export function useCalendar() {
     await auth.bootstrap()
     if (!auth.isManager.value) return
     await load(true)
-    if (!mock) connectRealtime()
+    if (mock) {
+      // In mock mode, we don't have realtime connection - mark as offline to avoid "Connecting…" UX issue
+      realtimeStatus.value = 'offline'
+    } else {
+      connectRealtime()
+    }
   }
 
   return {

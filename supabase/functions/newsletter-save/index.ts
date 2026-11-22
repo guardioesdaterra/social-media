@@ -8,13 +8,14 @@
  * Auth: Bearer <access token of an @earthguardians.org account>
  * Body: { action: 'upsert_newsletter' | 'delete_newsletter', newsletter?: ..., id?: ... }
  */
-import { fail, json, readJsonBody } from '../_shared/cors.ts'
+import { corsHeaders, fail, json, readJsonBody } from '../_shared/cors.ts'
 import {
   requireManager,
   sanitizeText,
   capText,
   type AuthedUser,
 } from '../_shared/auth.ts'
+import { sanitizeHtml } from '../_shared/sanitize.ts'
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 
 const MAX_TITLE = 200
@@ -23,7 +24,7 @@ const MAX_BODY = 100000
 const MAX_RECIPIENT_LIST = 5000
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors(req) })
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) })
   if (req.method !== 'POST') return fail('Method not allowed', 405, req)
 
   const { user, error } = await requireManager(req)
@@ -93,7 +94,7 @@ async function upsertNewsletter(
   if (!title) return httpError('Newsletter title is required.')
   const subject = capText(sanitizeText(n.subject, MAX_SUBJECT), MAX_SUBJECT)
   if (!subject) return httpError('Newsletter subject is required.')
-  const body = typeof n.body === 'string' ? n.body.slice(0, MAX_BODY) : ''
+  const body = typeof n.body === 'string' ? sanitizeHtml(n.body).slice(0, MAX_BODY) : ''
   if (!body) return httpError('Newsletter body is required.')
   const status = validateStatus(n.status)
   const scheduledAt =
@@ -165,17 +166,6 @@ async function deleteNewsletter(
   if (!data) return httpError('Newsletter not found.', 404)
   void user
   return { action: 'delete_newsletter', id }
-}
-
-function cors(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') || ''
-  return {
-    'Access-Control-Allow-Origin': origin || 'https://guardioesdaterra.github.io',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, origin',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Max-Age': '86400',
-    Vary: 'Origin',
-  }
 }
 
 async function adminClient(): Promise<SupabaseClient | null> {

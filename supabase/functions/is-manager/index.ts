@@ -34,7 +34,7 @@ function headers(req: Request): Record<string, string> {
       }
     })()
       ? origin
-      : ALLOWED_ORIGINS[ALLOWED_ORIGINS.length - 1]
+      : ALLOWED_ORIGINS[ALLOWED_ORIGINS.length - 1] ?? ''
   return {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': allow,

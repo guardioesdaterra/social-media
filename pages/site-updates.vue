@@ -219,10 +219,11 @@ function onCardContext(e: MouseEvent, u: SiteUpdate) {
       hint: '↗',
       onSelect: () => window.open(`https://web.archive.org/web/2/${u.url}`, '_blank') 
     })
-    if (u.snapshot_timestamps?.length) {
+    const latestSnapshot = u.snapshot_timestamps?.[0]
+    if (latestSnapshot) {
       items.push({ 
         label: 'View latest snapshot', 
-        onSelect: () => window.open(`https://web.archive.org/web/${u.snapshot_timestamps[0]}/${u.url}`, '_blank') 
+        onSelect: () => window.open(`https://web.archive.org/web/${latestSnapshot}/${u.url}`, '_blank') 
       })
     }
   }

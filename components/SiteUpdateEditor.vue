@@ -140,7 +140,7 @@
             <div v-if="waybackTab === 'diff' && waybackSnapshots.length >= 2">
               <DiffViewer
                 :snapshots="waybackSnapshots"
-                :url="form.url"
+                :url="form.url || ''"
                 @change="onDiffChange"
               />
             </div>
@@ -232,7 +232,7 @@ function resetForm() {
   form.published_at = u?.published_at ? u.published_at.slice(0, 16) : ''
   form.url = u?.url ?? ''
   form.wayback_url = u?.wayback_url ?? ''
-  form.snapshot_timestamps = u?.snapshot_timestamps ?? []
+  form.snapshot_timestamps = u?.snapshot_timestamps ? [...u.snapshot_timestamps] : []
   form.last_diff = u?.last_diff ?? ''
   
   // Reset Wayback state

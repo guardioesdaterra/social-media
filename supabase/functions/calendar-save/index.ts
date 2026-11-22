@@ -8,7 +8,7 @@
  * Auth: Bearer <access token of an @earthguardians.org account>
  * Body: a SaveAction (see lib/types.ts on the client)
  */
-import { fail, json, readJsonBody } from '../_shared/cors.ts'
+import { corsHeaders, fail, json, readJsonBody } from '../_shared/cors.ts'
 import {
   COLOR_RE,
   FORMATS,
@@ -32,7 +32,7 @@ const MAX_SETTING_KEY = 64
 const MAX_SETTING_VALUE_BYTES = 256 * 1024
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors(req) })
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) })
   if (req.method !== 'POST') return fail('Method not allowed', 405, req)
 
   const { user, error } = await requireManager(req)
@@ -123,8 +123,9 @@ async function nextSortOrder(admin: SupabaseClient, day: string): Promise<number
     .order('sort_order', { ascending: false })
     .limit(1)
   if (error) httpError(error.message, 500)
-  if (!data || data.length === 0) return 0
-  return (data[0].sort_order ?? -1) + 1
+  const latest = data?.[0]
+  if (!latest) return 0
+  return (latest.sort_order ?? -1) + 1
 }
 
 function validateDay(value: unknown): string {
@@ -337,7 +338,6 @@ function normalizeTopic(rawTopic: unknown): Record<string, unknown> {
     needs_attention: needsAttention,
     attention_rank: rank,
     updated_at: new Date().toISOString(),
-    updated_by: 'x',
   }
 }
 
@@ -580,17 +580,6 @@ async function upsertSetting(
 }
 
 /* ------------------------------------------------------------------ */
-
-function cors(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') || ''
-  return {
-    'Access-Control-Allow-Origin': origin || 'https://guardioesdaterra.github.io',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, origin',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Max-Age': '86400',
-    Vary: 'Origin',
-  }
-}
 
 async function adminClient(): Promise<SupabaseClient | null> {
   const url = Deno.env.get('SUPABASE_URL') ?? ''

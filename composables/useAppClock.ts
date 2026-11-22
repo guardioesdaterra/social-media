@@ -52,6 +52,16 @@ export function useAppClock() {
     }).format(now.value)
   })
 
+  const timeOnly = computed(() => {
+    return new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: timezone.value,
+    }).format(now.value)
+  })
+
   const tzLabel = computed(() => {
     try {
       return new Intl.DateTimeFormat('en-US', { timeZone: timezone.value, timeZoneName: 'longOffset' }).format(now.value)
@@ -95,6 +105,7 @@ export function useAppClock() {
     timezone,
     isUtc,
     formatted,
+    timeOnly,
     tzLabel,
     setTimezone,
     start,

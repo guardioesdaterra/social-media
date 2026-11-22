@@ -143,17 +143,12 @@ const canGoNext = computed(() => currentIndex.value < props.snapshots.length - 1
 
 const currentFrom = computed(() => {
   if (currentIndex.value > 0) {
-    return props.snapshots[currentIndex.value - 1].timestamp
+    return props.snapshots[currentIndex.value - 1]?.timestamp ?? ''
   }
   return ''
 })
 
-const currentTo = computed(() => {
-  if (currentIndex.value < props.snapshots.length) {
-    return props.snapshots[currentIndex.value].timestamp
-  }
-  return ''
-})
+const currentTo = computed(() => props.snapshots[currentIndex.value]?.timestamp ?? '')
 
 const iframeUrlFrom = computed(() => {
   if (!currentFrom.value) return ''
@@ -206,8 +201,10 @@ async function loadDiff() {
   try {
     const wayback = useWayback()
     diff.value = await wayback.getDiff(props.url, currentFrom.value, currentTo.value)
-    
-    emit('change', props.snapshots[currentIndex.value - 1], props.snapshots[currentIndex.value])
+
+    const fromSnap = props.snapshots[currentIndex.value - 1]
+    const toSnap = props.snapshots[currentIndex.value]
+    if (fromSnap && toSnap) emit('change', fromSnap, toSnap)
   } catch (e) {
     console.error('Failed to load diff:', e)
     diff.value = null

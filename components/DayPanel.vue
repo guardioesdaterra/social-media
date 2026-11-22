@@ -4,25 +4,11 @@
       <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
         {{ dayTitle }} <span class="ml-1 text-[11px] font-normal text-zinc-600">{{ itemCount }} item{{ itemCount === 1 ? '' : 's' }}</span>
       </h2>
-      <button
-        v-if="canEdit"
-        class="eg-btn-ghost !px-2.5 !py-1.5 text-xs shrink-0"
-        aria-label="Add post"
-        @click="emit('add')"
-      >
-        + Add post
-      </button>
+      <CreateMenu :day="day" @create="emit('create', $event)" />
     </div>
 
     <div v-if="items.length === 0" class="rounded-xl border border-[var(--eg-border)] bg-white/[0.02] p-4 text-center">
       <p class="text-xs text-zinc-500">No items scheduled for this day.</p>
-      <button
-        v-if="canEdit"
-        class="mt-3 eg-btn-ghost !px-3 !py-1.5 text-xs"
-        @click="emit('add')"
-      >
-        Create a post
-      </button>
     </div>
 
     <div v-else class="space-y-2">
@@ -134,13 +120,14 @@
 </template>
 
 <script setup lang="ts">
-import type { CalendarItem, CalendarItemPost, CalendarPost, PostStatus, Topic } from '~/lib/types'
+import type { CalendarItem, CalendarItemKind, CalendarItemPost, CalendarPost, PostStatus, Topic } from '~/lib/types'
 import type { ContextMenuEntry } from '~/composables/useContextMenu'
 import { dayLabel } from '~/lib/calendar'
 import { statusLabel } from '~/lib/types'
 import { computed, ref } from 'vue'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
 import { itemKindColor, itemKindLabel } from '~/lib/types'
+import CreateMenu from '~/components/CreateMenu.vue'
 
 const props = defineProps<{
   day: string
@@ -149,7 +136,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  add: []
+  create: [kind: CalendarItemKind]
   'edit-item': [item: CalendarItem]
   delete: [id: string]
   save: [draft: any]
@@ -225,7 +212,7 @@ async function confirmDelete(id: string) {
 function onPanelContext(e: MouseEvent) {
   const items: ContextMenuEntry[] = []
   if (canEdit.value) {
-    items.push({ label: 'Add post to this day', onSelect: () => emit('add') })
+    items.push({ label: 'Add post to this day', onSelect: () => emit('create', 'post') })
     items.push({ type: 'separator' })
   }
   items.push(

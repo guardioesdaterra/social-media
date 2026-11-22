@@ -1,38 +1,5 @@
 <template>
   <section class="eg-card overflow-hidden" aria-label="Month calendar">
-    <!-- Toolbar -->
-    <div class="flex flex-wrap items-center gap-2 border-b border-[var(--eg-border)] px-3 py-2.5 sm:px-4">
-      <div class="flex items-center gap-1">
-        <button class="eg-btn-ghost !px-2.5 !py-1.5" aria-label="Previous month" @click="shift(-1)">‹</button>
-        <button class="eg-btn-ghost !px-2.5 !py-1.5" aria-label="Next month" @click="shift(1)">›</button>
-        <button class="eg-btn-ghost !px-3 !py-1.5 text-xs" @click="goToday">Today</button>
-      </div>
-
-      <h1 class="flex-1 text-center text-base font-semibold text-white sm:text-lg">
-        {{ monthLabel(year, month) }}
-        <span class="ml-1 text-sm font-normal text-zinc-500">· {{ monthItemCount }} item{{ monthItemCount === 1 ? '' : 's' }}</span>
-      </h1>
-
-      <div class="flex items-center gap-1.5">
-        <select
-          class="eg-input !w-auto !py-1.5 text-xs"
-          :value="year"
-          aria-label="Year"
-          @change="onYear"
-        >
-          <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-        </select>
-        <select
-          class="eg-input !w-auto !py-1.5 text-xs"
-          :value="month"
-          aria-label="Month"
-          @change="onMonth"
-        >
-          <option v-for="(m, i) in MONTHS" :key="m" :value="i + 1">{{ m }}</option>
-        </select>
-      </div>
-    </div>
-
     <!-- Weekday headers -->
     <div class="grid grid-cols-7 border-b border-[var(--eg-border)] bg-white/[0.02]">
       <div
@@ -50,18 +17,18 @@
     <div class="grid grid-cols-7">
       <template v-for="(week, wi) in weeksView" :key="wi">
         <button
-          v-for="cell in week"
+          v-for="(cell, ci) in week"
           :key="cell.date"
           type="button"
           class="group relative min-h-[62px] border-b border-r border-[var(--eg-border)] p-1 text-left transition
-            last:border-r-0 sm:min-h-[112px] sm:p-1.5"
+            sm:min-h-[112px] sm:p-1.5"
+          :class="[(ci + 1) % 7 === 0 ? 'border-r-0' : '', cellClasses(cell), { 'ring-2 ring-[var(--eg-accent)]': dragOverCell === cell.date }]"
           :aria-label="cell.aria"
           :aria-pressed="cell.date === selected"
           @click="emit('select', cell.date)"
           @contextmenu.prevent="onDayContext($event, cell)"
           @dragover.prevent="onCellDragOver($event, cell)"
           @drop="onCellDrop($event, cell)"
-          :class="{ ...cellClasses(cell), 'ring-2 ring-[var(--eg-accent)]': dragOverCell === cell.date }"
         >
           <span class="flex items-start justify-between gap-1">
             <span
@@ -131,6 +98,8 @@ type CalendarMonthEmits = {
   select: [day: string]
   cursor: [iso: string]
   'new-post': [day: string]
+  'new-newsletter': [day: string]
+  'new-site-update': [day: string]
   'edit-item': [item: CalendarItem]
   'view-week': [day: string]
   'move-item': [id: string, kind: string, day: string]
@@ -235,7 +204,7 @@ function cellClasses(cell: CellView) {
   return {
     'bg-white/[0.03]': cell.date === props.selected,
     'ring-1 ring-inset ring-[var(--eg-accent)]': cell.date === props.selected,
-    'opacity-40': cell.adjacent,
+    'opacity-60': cell.adjacent,
     'hover:bg-white/[0.06]': true,
     'cursor-pointer': true,
   }
@@ -271,6 +240,8 @@ function onDayContext(e: MouseEvent, cell: CellView) {
       { label: 'Copy title', onSelect: () => void copyText(item.title || 'Untitled', 'Title copied.') },
       { type: 'separator' },
       { label: 'New post on this day', onSelect: () => emit('new-post', cell.date) },
+      { label: 'New newsletter on this day', onSelect: () => emit('new-newsletter', cell.date) },
+      { label: 'New site update on this day', onSelect: () => emit('new-site-update', cell.date) },
       { label: 'Open day', onSelect: () => emit('select', cell.date) },
       { type: 'separator' },
       { label: 'Copy date', onSelect: () => void copyText(dayLabel(cell.date), 'Date copied.') },
@@ -282,7 +253,11 @@ function onDayContext(e: MouseEvent, cell: CellView) {
 
   const items: ContextMenuEntry[] = [{ label: 'Open day', onSelect: () => emit('select', cell.date) }]
   if (isManager.value) {
-    items.push({ label: 'New post on this day', onSelect: () => emit('new-post', cell.date) })
+    items.push(
+      { label: 'New post on this day', onSelect: () => emit('new-post', cell.date) },
+      { label: 'New newsletter on this day', onSelect: () => emit('new-newsletter', cell.date) },
+      { label: 'New site update on this day', onSelect: () => emit('new-site-update', cell.date) },
+    )
   }
   items.push(
     { type: 'separator' },

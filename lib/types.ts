@@ -107,7 +107,7 @@ export interface SiteUpdate {
   url: string | null
   // Wayback integration fields
   wayback_url?: string | null  // Original URL for Wayback snapshots
-  snapshot_timestamps?: string[]  // Array of captured timestamps
+  snapshot_timestamps?: readonly string[]  // Array of captured timestamps
   last_diff?: string | null  // JSON string of last diff
   created_at?: string
   updated_at: string
