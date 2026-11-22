@@ -8,7 +8,7 @@
         <img
           src="/EG-Logo.webp"
           alt="EG"
-          class="h-8 w-8 shrink-0"
+          class="h-8 w-auto shrink-0 object-contain"
           aria-hidden="true"
         />
         <span class="hidden leading-tight sm:block">
