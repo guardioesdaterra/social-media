@@ -24,11 +24,11 @@ function fail(message) {
 const SUPABASE_CMD = 'npx'
 const SUPABASE_ARGS = ['--yes', 'supabase']
 
-function run(subcommand, subargs = [], { stdio = 'inherit', env = process.env } = {}) {
+function run(subcommand, subargs = [], { stdio = 'inherit', env = process.env, fatal = true } = {}) {
   const fullArgs = [...SUPABASE_ARGS, subcommand, ...subargs]
   const result = spawnSync(SUPABASE_CMD, fullArgs, { stdio, env, shell: false })
   if (result.error) fail(`could not start ${SUPABASE_CMD}: ${result.error.message}`)
-  if (result.status !== 0) {
+  if (result.status !== 0 && fatal) {
     fail(`${SUPABASE_CMD} ${fullArgs.join(' ')} exited with status ${result.status}`)
   }
   return result
@@ -52,9 +52,16 @@ function main() {
   }
   console.log(`[deploy-supabase] Target project: ${projectRef}`)
 
-  // 1) Push schema + seed migrations.
+  // 1) Push schema + seed migrations (best-effort: no local migrations dir
+  //    exists in this repo, and the remote schema is already in place).
   console.log('[deploy-supabase] Pushing database migrations...')
-  run('db', ['push', '--project-ref', projectRef, '--yes'])
+  const dbResult = run('db', ['push', '--project-ref', projectRef, '--yes'], {
+    stdio: 'pipe',
+    fatal: false,
+  })
+  if (dbResult.status !== 0) {
+    console.warn('[deploy-supabase] db push failed (no local migrations to push) — continuing to deploy edge functions')
+  }
 
   // 2) Deploy edge functions.
   const functions = [
@@ -66,6 +73,7 @@ function main() {
     'site-update-get',
     'site-update-save',
     'wayback-capture',
+    'wayback-cdx',
   ]
   for (const name of functions) {
     console.log(`[deploy-supabase] Deploying edge function: ${name}`)

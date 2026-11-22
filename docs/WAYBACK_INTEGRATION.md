@@ -2,6 +2,49 @@
 
 This document describes the Wayback Machine integration for tracking and comparing website changes over time.
 
+## CORS fix — server-side proxy
+
+`web.archive.org` does **not** send `Access-Control-Allow-Origin`, so browsers block direct `fetch` from GitHub Pages (`guardioesdaterra.github.io`). All archive.org calls are now proxied through the `wayback-cdx` Supabase edge function, which runs server-side and returns CORS-safe JSON.
+
+### Edge function: `wayback-cdx`
+
+`supabase/functions/wayback-cdx/index.ts`
+
+```
+GET /functions/v1/wayback-cdx?op=cdx&url=...&limit=50&from=...&to=...
+GET /functions/v1/wayback-cdx?op=snapshot&url=...&timestamp=...
+GET /functions/v1/wayback-cdx?op=available&url=...&timestamp=...
+Auth: Bearer <access token of an @earthguardians.org account>
+```
+
+- `op=cdx` → proxies the CDX API, returns `{ snapshots, count }` (same shape the UI expects).
+- `op=snapshot` → fetches raw archived HTML via the `id_` modifier (no archive toolbar), returns `{ content }`.
+- `op=available` → proxies `/wayback/available`, returns `{ snapshot }`.
+
+The function is manager-gated (same `requireManager` helper used by `wayback-capture` and other edge functions) and includes CORS headers for `guardioesdaterra.github.io` and `*.earthguardians.org`.
+
+It is deployed alongside the other edge functions:
+
+```js
+// scripts/deploy-supabase.mjs
+'wayback-capture',
+'wayback-cdx',
+```
+
+Run: `pnpm supabase:deploy` (requires a linked Supabase project). No `WAYBACK_API_KEY` is needed for CDX reads — that key is only for Save Page Now captures (`wayback-capture`).
+
+### Client: `composables/useWayback.ts`
+
+`getSnapshots`, `getSnapshotContent` and `getNearestSnapshot` now call the `wayback-cdx` edge function (with the current session's bearer token) instead of fetching `web.archive.org` directly. In mock mode (`NUXT_PUBLIC_MOCK=1`) they return empty results without any network call.
+
+`getReplayUrl` still builds a `web.archive.org/web/...` URL, but only for user-initiated navigation (links / `window.open` / iframe `src`), which does not trigger CORS.
+
+### Setup required
+
+1. Link the Supabase project: `npx supabase link --project-ref eghddkeceomhwkaefqrq`.
+2. Deploy edge functions: `pnpm supabase:deploy` (now includes `wayback-cdx`).
+3. Ensure managers sign in with an `@earthguardians.org` account so the bearer token passes the `requireManager` gate.
+
 ## Overview
 
 The integration provides:

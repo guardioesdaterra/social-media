@@ -30,3 +30,6 @@ Thumbs.db
 # Temp
 tmp
 .cache
+
+# Supabase (edge functions deployed separately via supabase CLI)
+supabase

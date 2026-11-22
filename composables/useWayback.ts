@@ -1,4 +1,6 @@
 import { ref } from 'vue'
+import { useSupabase, edgeFunctionUrl } from '~/lib/supabase'
+import { isMock } from '~/lib/mock'
 
 export interface WaybackSnapshot {
   timestamp: string
@@ -29,19 +31,68 @@ export interface WaybackSnapshotWithContent extends WaybackSnapshot {
 
 /**
  * Wayback Machine integration for site updates.
- * Uses CDX API with digest collapsing to find changed snapshots.
- * Uses id_ modifier for programmatic fetching without archive toolbar.
+ *
+ * All archive.org calls are proxied through the `wayback-cdx` Supabase edge
+ * function because web.archive.org does not send
+ * `Access-Control-Allow-Origin`, which blocks direct browser fetch from
+ * GitHub Pages (CORS). The edge function runs server-side and returns
+ * CORS-safe JSON.
  */
 export function useWayback() {
   const loading = ref(false)
   const snapshots = ref<WaybackSnapshot[]>([])
   const error = ref<string | null>(null)
 
-  const CDX_BASE = 'https://web.archive.org/cdx/search/cdx'
-  const DELAY_MS = 600 // Respect rate limits
+  const supabase = useSupabase()
+
+  /** Bearer token from the current Supabase session. */
+  async function authHeaders(): Promise<Record<string, string>> {
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    if (!token) {
+      throw new Error('Your session expired. Please sign in again.')
+    }
+    return {
+      Authorization: `Bearer ${token}`,
+    }
+  }
+
+  /** Call the wayback-cdx edge function with the given op + query params. */
+  async function cdxRequest(
+    op: string,
+    params: Record<string, string>,
+  ): Promise<Response> {
+    const base = edgeFunctionUrl('wayback-cdx')
+    const url = new URL(base)
+    url.searchParams.set('op', op)
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value)
+    }
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        ...(await authHeaders()),
+      },
+    })
+    return res
+  }
+
+  /** Parse a JSON edge-function response, throwing a descriptive error on failure. */
+  async function jsonResponse(res: Response): Promise<unknown> {
+    const text = await res.text()
+    if (!res.ok) {
+      throw new Error(`Wayback proxy error: ${res.status} ${text.slice(0, 300)}`)
+    }
+    if (!text) return null
+    try {
+      return JSON.parse(text)
+    } catch {
+      throw new Error(`Invalid JSON from wayback proxy (HTTP ${res.status})`)
+    }
+  }
 
   /**
-   * Query CDX for snapshots with digest collapsing.
+   * Query CDX for snapshots with digest collapsing via the edge function.
    * Returns only snapshots where content actually changed.
    */
   async function getSnapshots(
@@ -55,48 +106,25 @@ export function useWayback() {
     loading.value = true
     error.value = null
 
-    const params = new URLSearchParams({
-      url: url,
-      output: 'json',
-      fl: 'timestamp,original,statuscode,mimetype,digest',
-      filter: 'statuscode:200',
-      collapse: 'digest', // Only return snapshots with unique content
-      ...(options.limit && { limit: String(options.limit) }),
-      ...(options.from && { from: options.from }),
-      ...(options.to && { to: options.to }),
-    })
+    if (isMock()) {
+      snapshots.value = []
+      return []
+    }
 
     try {
-      const res = await fetch(`${CDX_BASE}?${params}`, {
-        headers: {
-          'User-Agent': 'EarthGuardians-Editorial-Calendar/1.0 (Site Update Manager)',
-        },
+      const res = await cdxRequest('cdx', {
+        url,
+        ...(options.limit ? { limit: String(options.limit) } : {}),
+        ...(options.from ? { from: options.from } : {}),
+        ...(options.to ? { to: options.to } : {}),
       })
 
-      if (!res.ok) {
-        throw new Error(`CDX API error: ${res.status}`)
-      }
+      const data = (await jsonResponse(res)) as {
+        snapshots?: WaybackSnapshot[]
+        count?: number
+      } | null
 
-      const data = await res.json()
-      
-      // CDX returns header row, parse snapshots
-      if (!Array.isArray(data) || data.length < 2) {
-        snapshots.value = []
-        return []
-      }
-
-      // First row is headers, skip it
-      const [, ...rows] = data as unknown[][]
-      
-      snapshots.value = rows.map((row: unknown[]) => ({
-        timestamp: String(row[0] || ''),
-        original: String(row[1] || ''),
-        statuscode: Number(row[2]) || 0,
-        mimetype: String(row[3] || ''),
-        digest: String(row[4] || ''),
-        url: `https://web.archive.org/web/${row[0]}/${url}`,
-      }))
-
+      snapshots.value = data?.snapshots ?? []
       return snapshots.value
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch snapshots'
@@ -110,20 +138,13 @@ export function useWayback() {
    * Get snapshot content using id_ modifier (no archive toolbar).
    */
   async function getSnapshotContent(url: string, timestamp: string): Promise<string> {
-    // Use id_ for raw content without archive modifications
-    const archiveUrl = `https://web.archive.org/web/${timestamp}id_/${url}`
-    
-    const res = await fetch(archiveUrl, {
-      headers: {
-        'User-Agent': 'EarthGuardians-Editorial-Calendar/1.0 (Site Update Manager)',
-      },
-    })
+    if (isMock()) return ''
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch snapshot: ${res.status}`)
-    }
-
-    return res.text()
+    const res = await cdxRequest('snapshot', { url, timestamp })
+    const data = (await jsonResponse(res)) as {
+      content?: string
+    } | null
+    return data?.content ?? ''
   }
 
   /**
@@ -264,32 +285,31 @@ export function useWayback() {
    * Get nearest snapshot to a specific date.
    */
   async function getNearestSnapshot(url: string, targetDate: string): Promise<WaybackSnapshot | null> {
-    const res = await fetch(
-      `https://web.archive.org/wayback/available?url=${encodeURIComponent(url)}&timestamp=${targetDate}`,
-      {
-        headers: {
-          'User-Agent': 'EarthGuardians-Editorial-Calendar/1.0 (Site Update Manager)',
-        },
-      }
-    )
+    if (isMock()) return null
 
-    if (!res.ok) return null
+    const res = await cdxRequest('available', { url, timestamp: targetDate })
+    const data = (await jsonResponse(res)) as {
+      snapshot?: {
+        timestamp: string
+        url: string
+        original: string
+        statuscode: number
+        mimetype: string
+        digest: string
+      } | null
+    } | null
 
-    const data = await res.json()
-    
-    if (data.archived_snapshots?.closest) {
-      const snap = data.archived_snapshots.closest
-      return {
-        timestamp: snap.timestamp,
-        url: snap.url,
-        digest: '',
-        statuscode: 200,
-        mimetype: 'text/html',
-        original: url,
-      }
+    if (!data?.snapshot) return null
+
+    const snap = data.snapshot
+    return {
+      timestamp: snap.timestamp,
+      url: snap.url,
+      digest: snap.digest,
+      statuscode: snap.statuscode,
+      mimetype: snap.mimetype,
+      original: snap.original,
     }
-    
-    return null
   }
 
   /**
