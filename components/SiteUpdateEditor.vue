@@ -3,7 +3,7 @@
     <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="close">
       <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
-      <div class="relative w-full max-w-2xl bg-[var(--eg-panel)] border border-[var(--eg-border)] rounded-xl shadow-2xl flex flex-col">
+      <div class="relative w-full max-w-[92vw] max-h-[85vh] bg-[var(--eg-panel)] border border-[var(--eg-border)] rounded-xl shadow-2xl flex flex-col overflow-hidden">
         <div class="flex items-center justify-between gap-3 border-b border-[var(--eg-border)] px-4 py-3">
           <h2 class="text-sm font-semibold text-white">
             {{ siteUpdate ? 'Edit site update' : 'New site update' }}
@@ -16,7 +16,7 @@
           </button>
         </div>
 
-        <form @submit.prevent="handleSubmit" class="p-4 space-y-3">
+        <form @submit.prevent="handleSubmit" class="p-4 space-y-3 flex-1 overflow-y-auto">
           <!-- Title -->
           <div>
             <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
@@ -132,8 +132,39 @@
               <WaybackPicker
                 :prefillUrl="form.url || undefined"
                 @snapshots="onSnapshotsLoaded"
+                @select="onSelectSnapshot"
                 @compare="onCompareSnapshots"
               />
+
+              <!-- Snapshot preview iframe -->
+              <div v-if="previewSnapshot" class="mt-4 rounded-lg border border-[var(--eg-border)] bg-black overflow-hidden">
+                <div class="flex items-center justify-between px-3 py-2 border-b border-[var(--eg-border)] bg-zinc-900">
+                  <span class="text-xs text-zinc-400">Preview: {{ formatSnapshotDate(previewSnapshot.timestamp) }}</span>
+                  <button
+                    type="button"
+                    class="eg-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white"
+                    @click="previewSnapshot = null"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div class="relative w-full h-[500px]">
+                  <iframe
+                    :src="previewReplayUrl"
+                    class="w-full h-full"
+                    sandbox="allow-same-origin allow-scripts"
+                    title="Wayback snapshot preview"
+                  />
+                </div>
+                <a
+                  :href="previewReplayUrl"
+                  target="_blank"
+                  rel="noopener"
+                  class="block px-3 py-2 text-xs text-[var(--eg-accent)] hover:underline border-t border-[var(--eg-border)]"
+                >
+                  Open in new tab ↗
+                </a>
+              </div>
             </div>
 
             <!-- Diff Tab -->
@@ -210,6 +241,12 @@ let saving = false
 const waybackTab = ref<'snapshots' | 'diff'>('snapshots')
 const waybackSnapshots = ref<WaybackSnapshot[]>([])
 const currentDiff = ref<WaybackDiff | null>(null)
+const previewSnapshot = ref<WaybackSnapshot | null>(null)
+
+const previewReplayUrl = computed(() => {
+  if (!previewSnapshot.value || !form.url) return ''
+  return `https://web.archive.org/web/${previewSnapshot.value.timestamp}/${form.url}`
+})
 
 function close() {
   emit('update:open', false)
@@ -238,12 +275,18 @@ function resetForm() {
   // Reset Wayback state
   waybackSnapshots.value = []
   currentDiff.value = null
+  previewSnapshot.value = null
   waybackTab.value = 'snapshots'
 }
 
 function onSnapshotsLoaded(snapshots: WaybackSnapshot[]) {
   waybackSnapshots.value = snapshots
   form.snapshot_timestamps = snapshots.map(s => s.timestamp)
+}
+
+function onSelectSnapshot(snap: WaybackSnapshot) {
+  previewSnapshot.value = snap
+  waybackTab.value = 'snapshots'
 }
 
 function onCompareSnapshots(snapshots: WaybackSnapshot[]) {
@@ -259,6 +302,14 @@ function onDiffChange(from: WaybackSnapshot, to: WaybackSnapshot) {
     url: form.url,
   }
   form.last_diff = JSON.stringify(diffInfo)
+}
+
+function formatSnapshotDate(timestamp: string): string {
+  if (!timestamp) return ''
+  const year = timestamp.slice(0, 4)
+  const month = timestamp.slice(4, 6)
+  const day = timestamp.slice(6, 8)
+  return `${year}-${month}-${day}`
 }
 
 async function handleSubmit() {

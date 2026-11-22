@@ -3,7 +3,7 @@
     <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="close">
       <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
-      <div class="relative w-full max-w-lg bg-[var(--eg-panel)] border border-[var(--eg-border)] rounded-xl shadow-2xl flex flex-col">
+      <div class="relative w-full max-w-[92vw] max-h-[85vh] bg-[var(--eg-panel)] border border-[var(--eg-border)] rounded-xl shadow-2xl flex flex-col overflow-hidden">
         <div class="flex items-center justify-between gap-3 border-b border-[var(--eg-border)] px-4 py-3">
           <h2 class="text-sm font-semibold text-white">
             {{ post ? 'Edit post' : 'New post' }}
@@ -13,7 +13,7 @@
           </button>
         </div>
 
-        <form @submit.prevent="handleSubmit" class="p-4 space-y-3">
+        <form @submit.prevent="handleSubmit" class="p-4 space-y-3 flex-1 overflow-y-auto">
           <!-- Day -->
           <div>
             <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Date</label>

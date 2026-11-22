@@ -73,7 +73,7 @@
               ? 'border-[var(--eg-accent)] bg-[var(--eg-accent)]/10'
               : 'border-[var(--eg-border)] hover:border-zinc-600'
           ]"
-          @click="toggleSelection(snap)"
+          @click="selectSnapshot(snap)"
         >
           <div class="flex items-center gap-2">
             <input
@@ -139,6 +139,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [url: string]
   'snapshots': [snapshots: WaybackSnapshot[]]
+  'select': [snap: WaybackSnapshot]
   'compare': [snapshots: WaybackSnapshot[]]
   'captured': [url: string]
 }>()
@@ -212,6 +213,10 @@ function toggleSelection(snap: WaybackSnapshot) {
     }
     selectedTimestamps.value.push(snap.timestamp)
   }
+}
+
+function selectSnapshot(snap: WaybackSnapshot) {
+  emit('select', snap)
 }
 
 function viewDiff() {
