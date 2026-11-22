@@ -65,6 +65,7 @@ function main() {
     'newsletter-save',
     'site-update-get',
     'site-update-save',
+    'wayback-capture',
   ]
   for (const name of functions) {
     console.log(`[deploy-supabase] Deploying edge function: ${name}`)

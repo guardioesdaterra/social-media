@@ -18,8 +18,31 @@
           :disabled="loading || !urlInput"
           @click="loadSnapshots"
         >
-          {{ loading ? 'Loading...' : 'Find Snapshots' }}
+          {{ loading ? '...' : 'Find' }}
         </button>
+        <button
+          class="eg-btn-ghost !px-3 !py-1.5 text-xs whitespace-nowrap"
+          :disabled="capturing || !urlInput"
+          @click="captureNow"
+          title="Capture now on Wayback Machine"
+        >
+          {{ capturing ? '...' : '📸' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Capture result -->
+    <div v-if="captureResult" class="mb-3 rounded-lg bg-green-500/10 border border-green-500/30 p-2 text-xs">
+      <div class="flex items-center justify-between">
+        <span class="text-green-300">{{ captureResult.message }}</span>
+        <a
+          :href="captureResult.url"
+          target="_blank"
+          rel="noopener"
+          class="text-[var(--eg-accent)] hover:underline"
+        >
+          View ↗
+        </a>
       </div>
     </div>
 
@@ -106,6 +129,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { WaybackSnapshot } from '~/composables/useWayback'
+import { useWaybackCapture } from '~/composables/useWaybackCapture'
 
 const props = defineProps<{
   modelValue?: string // Initial URL
@@ -116,6 +140,7 @@ const emit = defineEmits<{
   'update:modelValue': [url: string]
   'snapshots': [snapshots: WaybackSnapshot[]]
   'compare': [snapshots: WaybackSnapshot[]]
+  'captured': [url: string]
 }>()
 
 const urlInput = ref(props.prefillUrl || props.modelValue || '')
@@ -124,6 +149,8 @@ const error = ref<string | null>(null)
 const snapshots = ref<WaybackSnapshot[]>([])
 const selectedTimestamps = ref<string[]>([])
 const hasSearched = ref(false)
+
+const { capturing, error: captureError, lastResult: captureResult, capture } = useWaybackCapture()
 
 const wayback = useWayback()
 
@@ -192,6 +219,24 @@ function viewDiff() {
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
   
   emit('compare', selected)
+}
+
+async function captureNow() {
+  if (!urlInput.value) return
+
+  // Normalize URL
+  let normalizedUrl = urlInput.value
+  if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+    normalizedUrl = 'https://' + normalizedUrl
+  }
+  urlInput.value = normalizedUrl
+
+  const result = await capture(normalizedUrl)
+  if (result) {
+    emit('captured', normalizedUrl)
+    // Refresh snapshots after capture
+    await loadSnapshots()
+  }
 }
 
 // Preload if URL provided
