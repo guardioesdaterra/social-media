@@ -9,7 +9,7 @@
             {{ siteUpdate ? 'Edit site update' : 'New site update' }}
           </h2>
           <button
-            class="eg-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white"
+            class="eg-glass-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white"
             @click="close"
           >
             ✕
@@ -19,12 +19,12 @@
         <form @submit.prevent="handleSubmit" class="p-4 space-y-3 flex-1 overflow-y-auto">
           <!-- Title -->
           <div>
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Title
             </label>
             <input
               type="text"
-              class="eg-input text-sm"
+              class="eg-glass-input text-sm"
               :value="form.title"
               @input="form.title = ($event.target as HTMLInputElement).value"
               maxlength="200"
@@ -35,12 +35,12 @@
 
           <!-- Slug -->
           <div>
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               URL slug
             </label>
             <input
               type="text"
-              class="eg-input text-sm"
+              class="eg-glass-input text-sm"
               :value="form.slug"
               @input="form.slug = ($event.target as HTMLInputElement).value"
               maxlength="200"
@@ -52,10 +52,10 @@
 
           <!-- Status -->
           <div>
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Status
             </label>
-            <select class="eg-input text-sm" v-model="form.status">
+            <select class="eg-glass-input text-sm" v-model="form.status">
               <option value="draft">Draft</option>
               <option value="published">Published</option>
               <option value="archived">Archived</option>
@@ -64,12 +64,12 @@
 
           <!-- Published at -->
           <div v-if="form.status === 'published'">
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Published at
             </label>
             <input
               type="datetime-local"
-              class="eg-input text-sm"
+              class="eg-glass-input text-sm"
               :value="form.published_at"
               @input="form.published_at = ($event.target as HTMLInputElement).value"
             />
@@ -77,12 +77,12 @@
 
           <!-- URL -->
           <div>
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Page URL
             </label>
             <input
               type="text"
-              class="eg-input text-sm"
+              class="eg-glass-input text-sm"
               :value="form.url"
               @input="form.url = ($event.target as HTMLInputElement).value"
               placeholder="https://earthguardians.org/restoration-dashboard"
@@ -91,18 +91,18 @@
 
           <!-- Content -->
           <div>
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Content (HTML)
             </label>
             <textarea
-              class="eg-input text-sm font-mono"
+              class="eg-glass-input text-sm font-mono"
               rows="12"
               :value="form.content"
               @input="form.content = ($event.target as HTMLTextAreaElement).value"
               placeholder="<h1>Welcome</h1><p>...</p>"
               required
             ></textarea>
-            <p class="mt-1 text-[10px] text-zinc-600">{{ form.content.length }} chars.</p>
+            <p class="mt-1 text-[10px] text-zinc-500">{{ form.content.length }} chars.</p>
           </div>
 
           <!-- Wayback Integration Tabs -->
@@ -142,7 +142,7 @@
                   <span class="text-xs text-zinc-400">Preview: {{ formatSnapshotDate(previewSnapshot.timestamp) }}</span>
                   <button
                     type="button"
-                    class="eg-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white"
+                    class="eg-glass-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white"
                     @click="previewSnapshot = null"
                   >
                     ✕
@@ -178,12 +178,12 @@
           </div>
 
           <div class="mt-4 flex justify-end gap-2">
-            <button type="button" class="eg-btn-ghost !px-3 !py-1.5 text-xs" @click="close">
+            <button type="button" class="eg-glass-btn-ghost !px-3 !py-1.5 text-xs" @click="close">
               Cancel
             </button>
             <button
               type="submit"
-              class="eg-btn-primary !px-4 !py-1.5 text-xs"
+              class="eg-glass-btn-primary !px-4 !py-1.5 text-xs"
               :disabled="saving || !form.title || !form.slug || !form.content"
             >
               <span v-if="saving" class="flex items-center gap-2">

@@ -9,7 +9,7 @@
             {{ newsletter ? 'Edit newsletter' : 'New newsletter' }}
           </h2>
           <button
-            class="eg-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white"
+            class="eg-glass-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white"
             @click="close"
           >
             ✕
@@ -19,12 +19,12 @@
         <form @submit.prevent="handleSubmit" class="p-4 space-y-3 flex-1 overflow-y-auto">
           <!-- Title -->
           <div>
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Title
             </label>
             <input
               type="text"
-              class="eg-input text-sm"
+              class="eg-glass-input text-sm"
               :value="form.title"
               @input="form.title = ($event.target as HTMLInputElement).value"
               maxlength="200"
@@ -35,12 +35,12 @@
 
           <!-- Subject -->
           <div>
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Email subject
             </label>
             <input
               type="text"
-              class="eg-input text-sm"
+              class="eg-glass-input text-sm"
               :value="form.subject"
               @input="form.subject = ($event.target as HTMLInputElement).value"
               maxlength="200"
@@ -51,10 +51,10 @@
 
           <!-- Status -->
           <div>
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Status
             </label>
-            <select class="eg-input text-sm" v-model="form.status">
+            <select class="eg-glass-input text-sm" v-model="form.status">
               <option value="draft">Draft</option>
               <option value="scheduled">Scheduled</option>
               <option value="sent">Sent</option>
@@ -63,12 +63,12 @@
 
           <!-- Scheduled at -->
           <div v-if="form.status === 'scheduled'">
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Scheduled at
             </label>
             <input
               type="datetime-local"
-              class="eg-input text-sm"
+              class="eg-glass-input text-sm"
               :value="form.scheduled_at"
               @input="form.scheduled_at = ($event.target as HTMLInputElement).value"
             />
@@ -76,12 +76,12 @@
 
           <!-- Recipient list -->
           <div>
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Recipients (comma-separated emails)
             </label>
             <input
               type="text"
-              class="eg-input text-sm"
+              class="eg-glass-input text-sm"
               :value="form.recipient_list"
               @input="form.recipient_list = ($event.target as HTMLInputElement).value"
               placeholder="newsletter@earthguardians.org, updates@earthguardians.org"
@@ -91,27 +91,27 @@
 
           <!-- Body -->
           <div>
-            <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
               Body (HTML)
             </label>
             <textarea
-              class="eg-input text-sm font-mono"
+              class="eg-glass-input text-sm font-mono"
               rows="12"
               :value="form.body"
               @input="form.body = ($event.target as HTMLTextAreaElement).value"
               placeholder="<p>Greetings EG Family!</p>..."
               required
             ></textarea>
-            <p class="mt-1 text-[10px] text-zinc-600">{{ form.body.length }} chars.</p>
+            <p class="mt-1 text-[10px] text-zinc-500">{{ form.body.length }} chars.</p>
           </div>
 
           <div class="mt-4 flex justify-end gap-2">
-            <button type="button" class="eg-btn-ghost !px-3 !py-1.5 text-xs" @click="close">
+            <button type="button" class="eg-glass-btn-ghost !px-3 !py-1.5 text-xs" @click="close">
               Cancel
             </button>
             <button
               type="submit"
-              class="eg-btn-primary !px-4 !py-1.5 text-xs"
+              class="eg-glass-btn-primary !px-4 !py-1.5 text-xs"
               :disabled="saving || !form.title || !form.subject || !form.body"
             >
               <span v-if="saving" class="flex items-center gap-2">
