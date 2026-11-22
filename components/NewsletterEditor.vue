@@ -109,8 +109,16 @@
             <button type="button" class="eg-btn-ghost !px-3 !py-1.5 text-xs" @click="close">
               Cancel
             </button>
-            <button type="submit" class="eg-btn-primary !px-4 !py-1.5 text-xs" :disabled="saving">
-              Save newsletter
+            <button
+              type="submit"
+              class="eg-btn-primary !px-4 !py-1.5 text-xs"
+              :disabled="saving || !form.title || !form.subject || !form.body"
+            >
+              <span v-if="saving" class="flex items-center gap-2">
+                <span class="h-3 w-3 animate-spin rounded-full border border-current border-r-transparent" />
+                Saving...
+              </span>
+              <span v-else>Save newsletter</span>
             </button>
           </div>
         </form>

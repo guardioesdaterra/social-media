@@ -121,6 +121,10 @@ async function upsertSiteUpdate(
     status,
     published_at: publishedAt,
     url,
+    // Wayback integration fields
+    wayback_url: typeof u.wayback_url === 'string' ? u.wayback_url.slice(0, MAX_URL) : null,
+    snapshot_timestamps: Array.isArray(u.snapshot_timestamps) ? u.snapshot_timestamps : null,
+    last_diff: typeof u.last_diff === 'string' ? u.last_diff.slice(0, 5000) : null,
     updated_at: new Date().toISOString(),
     updated_by: user.email,
   }

@@ -1,0 +1,130 @@
+name: Wayback Machine Snapshots
+
+on:
+  schedule:
+    # Run weekly on Sunday at 3am UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Single URL to snapshot (optional)'
+        required: false
+        type: string
+
+jobs:
+  snapshot-and-diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pages: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch tracked URLs from database
+        id: fetch-urls
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # Get all published site updates with URLs
+          echo "urls=$(node -e "
+            const { createClient } = require('@supabase/supabase-js');
+            const client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+            client.from('site_updates').select('url,wayback_url').neq('url', null).then(({ data }) => {
+              const urls = [...new Set(data?.map(r => r.wayback_url || r.url).filter(Boolean))];
+              console.log(urls.join(','));
+            });
+          ")" >> $GITHUB_OUTPUT
+
+      - name: Save Wayback snapshots
+        id: save-snapshots
+        env:
+          WAYBACK_API_KEY: ${{ secrets.WAYBACK_API_KEY }}
+        run: |
+          # For each URL, trigger a Wayback save
+          # Using the Save Page Now API
+          
+          URLS="${{ inputs.url || steps.fetch-urls.outputs.urls }}"
+          
+          for url in $(echo "$URLS" | tr ',' '\n'); do
+            echo "Saving snapshot for: $url"
+            
+            # Use archive.org's save API
+            # The if_not_archived_within parameter skips if captured in last 7 days
+            curl -s -o /dev/null -w "%{http_code}" \
+              -X POST "https://web.archive.org/save/$url" \
+              -H "Authorization: LOW ${{ secrets.WAYBACK_API_KEY }}" \
+              -d "url=$url" \
+              -d "if_not_archived_within=7" \
+              -d "capture_all=1" \
+              || echo "Save failed for $url"
+            
+            # Respect rate limits - wait between requests
+            sleep 5
+          done
+
+      - name: Generate diffs
+        id: generate-diffs
+        run: |
+          # This step would query CDX, fetch snapshots, compute diffs
+          # and commit JSON files to the repo
+          
+          # For now, create a placeholder diff report
+          mkdir -p wayback-diffs
+          echo '# Wayback Diff Reports' > wayback-diffs/README.md
+          echo 'Generated: '$(date -u +"%Y-%m-%dT%H:%M:%SZ") >> wayback-diffs/README.md
+          
+          echo "diff_report=true" >> $GITHUB_OUTPUT
+
+      - name: Commit diff reports
+        if: steps.generate-diffs.outputs.diff_report == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: generate Wayback diff reports"
+          file_pattern: "wayback-diffs/*"
+          commit_options: "--signoff"
+
+  # Alternative: Precompute diffs at build time
+  precompute-diffs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: false  # Disabled by default - enable if needed
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run diff precomputation script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # This would:
+          # 1. Query CDX for each tracked URL
+          # 2. Use collapse=digest to find changed snapshots
+          # 3. Fetch id_ snapshots and extract text
+          # 4. Compute diffs against previous snapshots
+          # 5. Save JSON to repo
+          
+          echo "Precomputation would run here"
+          echo "This requires the repository to have write access"

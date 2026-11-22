@@ -79,6 +79,13 @@
                   <span v-if="u.url" class="text-[10px] text-zinc-500">
                     · {{ u.url }}
                   </span>
+                  <span 
+                    v-if="u.snapshot_timestamps?.length" 
+                    class="text-[10px] text-[var(--eg-accent)]"
+                    :title="u.snapshot_timestamps.length + ' snapshots'"
+                  >
+                    · 📸 {{ u.snapshot_timestamps.length }}
+                  </span>
                 </div>
               </div>
               <div class="flex items-center gap-1">
@@ -206,11 +213,26 @@ function onCardContext(e: MouseEvent, u: SiteUpdate) {
   }
   if (u.url) {
     items.push({ label: 'Copy URL', onSelect: () => void copyText(u.url || '', 'URL copied.') })
+    // Wayback actions
+    items.push({ 
+      label: 'View on Wayback', 
+      hint: '↗',
+      onSelect: () => window.open(`https://web.archive.org/web/2/${u.url}`, '_blank') 
+    })
+    if (u.snapshot_timestamps?.length) {
+      items.push({ 
+        label: 'View latest snapshot', 
+        onSelect: () => window.open(`https://web.archive.org/web/${u.snapshot_timestamps[0]}/${u.url}`, '_blank') 
+      })
+    }
   }
   if (u.content) {
     items.push({ label: 'Copy content', onSelect: () => void copyText(u.content, 'Content copied.') })
   }
   items.push({ type: 'separator' }, { label: 'Copy status', hint: u.status, onSelect: () => void copyText(u.status, 'Status copied.') })
+  if (u.snapshot_timestamps?.length) {
+    items.push({ label: 'Snapshots', hint: `${u.snapshot_timestamps.length} captured`, onSelect: () => openEditor(u) })
+  }
   if (isManager.value) {
     items.push({ type: 'separator' }, { label: 'Delete site update', danger: true, onSelect: () => void deleteSiteUpdate(u.id) })
   }

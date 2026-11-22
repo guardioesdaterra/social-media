@@ -105,6 +105,10 @@ export interface SiteUpdate {
   status: SiteUpdateStatus
   published_at: string | null
   url: string | null
+  // Wayback integration fields
+  wayback_url?: string | null  // Original URL for Wayback snapshots
+  snapshot_timestamps?: string[]  // Array of captured timestamps
+  last_diff?: string | null  // JSON string of last diff
   created_at?: string
   updated_at: string
   updated_by: string | null
@@ -119,6 +123,10 @@ export interface SiteUpdateDraft {
   status?: SiteUpdateStatus
   published_at?: string | null
   url?: string | null
+  // Wayback integration
+  wayback_url?: string | null
+  snapshot_timestamps?: string[]
+  last_diff?: string | null
 }
 export interface PostDraft {
   id?: string

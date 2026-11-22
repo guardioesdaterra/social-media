@@ -105,12 +105,61 @@
             <p class="mt-1 text-[10px] text-zinc-600">{{ form.content.length }} chars.</p>
           </div>
 
+          <!-- Wayback Integration Tabs -->
+          <div class="pt-3 border-t border-[var(--eg-border)]">
+            <div class="flex gap-1 mb-3">
+              <button
+                type="button"
+                class="px-3 py-1.5 text-xs rounded-lg transition-colors"
+                :class="waybackTab === 'snapshots' ? 'bg-[var(--eg-accent)] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'"
+                @click="waybackTab = 'snapshots'"
+              >
+                📸 Snapshots
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1.5 text-xs rounded-lg transition-colors"
+                :class="waybackTab === 'diff' ? 'bg-[var(--eg-accent)] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'"
+                @click="waybackTab = 'diff'"
+                :disabled="waybackSnapshots.length < 2"
+              >
+                🔄 Compare
+              </button>
+            </div>
+
+            <!-- Snapshots Tab -->
+            <div v-if="waybackTab === 'snapshots'">
+              <WaybackPicker
+                :prefillUrl="form.url || undefined"
+                @snapshots="onSnapshotsLoaded"
+                @compare="onCompareSnapshots"
+              />
+            </div>
+
+            <!-- Diff Tab -->
+            <div v-if="waybackTab === 'diff' && waybackSnapshots.length >= 2">
+              <DiffViewer
+                :snapshots="waybackSnapshots"
+                :url="form.url"
+                @change="onDiffChange"
+              />
+            </div>
+          </div>
+
           <div class="mt-4 flex justify-end gap-2">
             <button type="button" class="eg-btn-ghost !px-3 !py-1.5 text-xs" @click="close">
               Cancel
             </button>
-            <button type="submit" class="eg-btn-primary !px-4 !py-1.5 text-xs" :disabled="saving">
-              Save site update
+            <button
+              type="submit"
+              class="eg-btn-primary !px-4 !py-1.5 text-xs"
+              :disabled="saving || !form.title || !form.slug || !form.content"
+            >
+              <span v-if="saving" class="flex items-center gap-2">
+                <span class="h-3 w-3 animate-spin rounded-full border border-current border-r-transparent" />
+                Saving...
+              </span>
+              <span v-else>Save site update</span>
             </button>
           </div>
         </form>
@@ -121,8 +170,11 @@
 
 <script setup lang="ts">
 import type { SiteUpdate, SiteUpdateDraft } from '~/lib/types'
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
+import type { WaybackSnapshot, WaybackDiff } from '~/composables/useWayback'
+import WaybackPicker from './WaybackPicker.vue'
+import DiffViewer from './DiffViewer.vue'
 
 const props = defineProps<{
   open: boolean
@@ -147,9 +199,17 @@ const form = reactive<SiteUpdateDraft & { published_at: string }>({
   status: 'draft',
   published_at: '',
   url: '',
+  wayback_url: '',
+  snapshot_timestamps: [],
+  last_diff: '',
 })
 
 let saving = false
+
+// Wayback state
+const waybackTab = ref<'snapshots' | 'diff'>('snapshots')
+const waybackSnapshots = ref<WaybackSnapshot[]>([])
+const currentDiff = ref<WaybackDiff | null>(null)
 
 function close() {
   emit('update:open', false)
@@ -171,6 +231,34 @@ function resetForm() {
   form.status = (u?.status ?? 'draft') as 'draft' | 'published' | 'archived'
   form.published_at = u?.published_at ? u.published_at.slice(0, 16) : ''
   form.url = u?.url ?? ''
+  form.wayback_url = u?.wayback_url ?? ''
+  form.snapshot_timestamps = u?.snapshot_timestamps ?? []
+  form.last_diff = u?.last_diff ?? ''
+  
+  // Reset Wayback state
+  waybackSnapshots.value = []
+  currentDiff.value = null
+  waybackTab.value = 'snapshots'
+}
+
+function onSnapshotsLoaded(snapshots: WaybackSnapshot[]) {
+  waybackSnapshots.value = snapshots
+  form.snapshot_timestamps = snapshots.map(s => s.timestamp)
+}
+
+function onCompareSnapshots(snapshots: WaybackSnapshot[]) {
+  waybackSnapshots.value = snapshots
+  waybackTab.value = 'diff'
+}
+
+function onDiffChange(from: WaybackSnapshot, to: WaybackSnapshot) {
+  // Store diff info in the form
+  const diffInfo = {
+    from: from.timestamp,
+    to: to.timestamp,
+    url: form.url,
+  }
+  form.last_diff = JSON.stringify(diffInfo)
 }
 
 async function handleSubmit() {
@@ -187,12 +275,14 @@ async function handleSubmit() {
     status: form.status,
     published_at: form.published_at || null,
     url: form.url || null,
+    wayback_url: form.url || null,
+    snapshot_timestamps: form.snapshot_timestamps,
+    last_diff: form.last_diff || null,
   }
 
   saving = true
   emit('save', draft)
-  close()
-  saving = false
+  // Do not close here: the parent closes the modal after the save promise resolves
 }
 
 async function handleDelete() {
