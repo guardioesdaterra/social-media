@@ -10,6 +10,56 @@ const TZ_KEY = 'eg-app-timezone'
 
 const DEFAULT_TZ = 'UTC'
 
+/** Expanded list of major world timezones for the header clock picker. */
+export const WORLD_TIMEZONES: string[] = [
+  'UTC',
+  'America/Nome',
+  'America/Anchorage',
+  'America/Los_Angeles',
+  'America/Denver',
+  'America/Chicago',
+  'America/New_York',
+  'America/Toronto',
+  'America/Halifax',
+  'America/Sao_Paulo',
+  'America/Buenos_Aires',
+  'Atlantic/South_Georgia',
+  'Atlantic/Azores',
+  'Europe/Reykjavik',
+  'Europe/Dublin',
+  'Europe/London',
+  'Europe/Berlin',
+  'Europe/Rome',
+  'Europe/Moscow',
+  'Europe/Istanbul',
+  'Asia/Dubai',
+  'Asia/Muscat',
+  'Asia/Karachi',
+  'Asia/Colombo',
+  'Asia/Dhaka',
+  'Asia/Rangun',
+  'Asia/Bangkok',
+  'Asia/Ho_Chi_Minh',
+  'Asia/Kuala_Lumpur',
+  'Asia/Shanghai',
+  'Asia/Seoul',
+  'Asia/Tokyo',
+  'Asia/Yakutsk',
+  'Australia/Perth',
+  'Australia/Darwin',
+  'Australia/Sydney',
+  'Australia/Broken_Hill',
+  'Australia/Lord_Howe',
+  'Australia/Brisbane',
+  'Australia/Hobart',
+  'Australia_Current',
+  'Pacific/Guam',
+  'Pacific/Honolulu',
+  'Pacific/Auckland',
+  'Pacific/Fiji',
+  'Pacific/Chatham',
+]
+
 function readTimezone(): string {
   if (!import.meta.client) return DEFAULT_TZ
   try {
@@ -79,6 +129,25 @@ export function useAppClock() {
     writeTimezone(tz)
   }
 
+  /** Convert the current time to another timezone and return formatted string. */
+  function convertTime(tz: string): string {
+    try {
+      return new Intl.DateTimeFormat('en-GB', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: tz,
+      }).format(now.value)
+    } catch {
+      return 'Error'
+    }
+  }
+
   function start(): void {
     if (timer) return
     tick()
@@ -110,5 +179,7 @@ export function useAppClock() {
     setTimezone,
     start,
     stop,
+    convertTime,
+    WORLD_TIMEZONES,
   }
 }

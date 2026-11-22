@@ -42,10 +42,10 @@
       </nav>
 
       <div class="flex-1 flex items-center justify-center gap-2">
-        <span class="hidden sm:inline text-xs font-mono text-zinc-400 sm:text-sm whitespace-nowrap tabular-nums" aria-label="Clock">
+        <span class="hidden sm:inline text-xs font-mono text-zinc-400 sm:text-sm whitespace-nowrap tabular-nums" aria-label="Clock" @click="onHeaderContext">
           {{ formatted }}
         </span>
-        <span class="sm:hidden text-xs font-mono text-zinc-400 whitespace-nowrap tabular-nums" aria-label="Clock">
+        <span class="sm:hidden text-xs font-mono text-zinc-400 whitespace-nowrap tabular-nums" aria-label="Clock" @click="onHeaderContext">
           {{ timeOnly }}
         </span>
         <span v-if="!isUtc" class="text-[10px] text-zinc-500">{{ tzLabel }}</span>
@@ -78,6 +78,7 @@
 
 <script setup lang="ts">
 import type { ContextMenuEntry } from '~/composables/useContextMenu'
+import { WORLD_TIMEZONES } from '~/composables/useAppClock'
 
 const { phase, manager, isManager, signOut } = useSupabaseAuth()
 const { now, timezone, isUtc, formatted, tzLabel, setTimezone } = useAppClock()
@@ -87,8 +88,8 @@ const toast = useToast()
 const ctx = useContextMenu()
 const { copyText } = useCopyText()
 
-/** Timezone options offered in the header context menu. */
-const TIMEZONES: string[] = ['UTC', 'America/Sao_Paulo', 'America/London', 'America/New_York', 'Asia/Tokyo', 'Australia/Sydney']
+/** Timezone options offered in the header clock/right-click menu. */
+const TIMEZONES: string[] = WORLD_TIMEZONES
 
 async function onSignOut() {
   await signOut()
