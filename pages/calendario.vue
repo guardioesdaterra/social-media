@@ -217,10 +217,6 @@
               >
                 ✕
               </button>
-              <h2 class="text-sm font-semibold text-white truncate flex-1">
-                {{ dayLabel(cursor) }}
-              </h2>
-              <CreateMenu :day="cursor" @create="onCreate" />
             </div>
             <div class="flex-1 overflow-y-auto p-3">
               <DayPanel
@@ -273,7 +269,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useWindowSize } from '@vueuse/core'
-import { parseIsoDay, todayIso, weekOf, monthLabel, dayLabel, daysInMonth } from '~/lib/calendar'
+import { parseIsoDay, todayIso, weekOf, monthLabel, daysInMonth } from '~/lib/calendar'
 import type { CalendarItem, CalendarPost, CalendarItemKind } from '~/lib/types'
 import { makeCalendarItem } from '~/lib/types'
 
