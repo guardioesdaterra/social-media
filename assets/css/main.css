@@ -101,7 +101,8 @@
   }
 
   .eg-glass-panel {
-    @apply bg-[var(--eg-panel)]/70 backdrop-blur-xl border border-[var(--eg-border)]/50 shadow-2xl;
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
+    background-color: rgb(10 10 10 / 70%);
   }
 
   .eg-glass-input {
@@ -115,8 +116,11 @@
   }
 
   .eg-glass-btn-primary {
-    @apply eg-glass-btn bg-[var(--eg-accent)]/90 border-transparent text-black
-      hover:bg-[var(--eg-accent)] hover:brightness-105 active:brightness-95;
+    @apply eg-glass-btn bg-white/5 border-transparent text-black bg-black/10;
+  }
+  .eg-glass-btn-primary:hover,
+  .eg-glass-btn-primary.eg-focused {
+    @apply bg-[var(--eg-accent)] hover:brightness-105 active:brightness-95;
   }
 
   .eg-glass-btn-ghost {
