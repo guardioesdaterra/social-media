@@ -126,4 +126,236 @@
   .eg-glass-btn-ghost {
     @apply eg-glass-btn border-transparent hover:border-white/20;
   }
+
+  /* ——— Fullscreen glass sheet (Apple-like) ——— */
+  .eg-sheet {
+    @apply flex flex-col overflow-hidden;
+    background: linear-gradient(
+      180deg,
+      rgba(16, 16, 18, 0.7) 0%,
+      rgba(10, 10, 11, 0.78) 100%
+    );
+    backdrop-filter: blur(40px) saturate(160%);
+    -webkit-backdrop-filter: blur(40px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 24px 80px rgba(0, 0, 0, 0.6);
+  }
+
+  .eg-sheet-header {
+    @apply flex items-center justify-between gap-4 px-6 py-4 shrink-0;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(30px) saturate(160%);
+    -webkit-backdrop-filter: blur(30px) saturate(160%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  }
+
+  .eg-sheet-footer {
+    @apply flex items-center justify-end gap-3 px-6 py-4 shrink-0;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(30px) saturate(160%);
+    -webkit-backdrop-filter: blur(30px) saturate(160%);
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .eg-section {
+    @apply rounded-2xl p-5 sm:p-6;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 8px 24px rgba(0, 0, 0, 0.22);
+  }
+
+  .eg-section-title {
+    @apply text-[13px] font-semibold tracking-tight text-white;
+  }
+
+  .eg-section-sub {
+    @apply mt-0.5 text-xs text-zinc-500;
+  }
+
+  .eg-field-label {
+    @apply mb-1.5 block text-[13px] font-medium text-zinc-300;
+  }
+
+  .eg-field-label .req {
+    @apply ml-0.5 text-[var(--eg-accent)];
+  }
+
+  .eg-field {
+    @apply w-full rounded-xl px-3.5 py-2.5 text-sm text-zinc-100 outline-none transition
+      duration-150 placeholder:text-zinc-500 select-text;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  .eg-field:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  .eg-field:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 0 0 3.5px rgba(34, 197, 94, 0.22);
+  }
+
+  .eg-field::selection {
+    background: rgba(34, 197, 94, 0.3);
+    color: #fff;
+  }
+
+  .eg-select {
+    @apply eg-field appearance-none pr-9 cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+  }
+
+  .eg-select option {
+    background: #18181b;
+    color: #f4f4f5;
+  }
+
+  .eg-textarea {
+    @apply eg-field resize-y leading-relaxed;
+  }
+
+  .eg-hint {
+    @apply mt-1.5 text-[11px] leading-snug text-zinc-500;
+  }
+
+  .eg-counter {
+    @apply mt-1.5 text-right text-[11px] tabular-nums text-zinc-600;
+  }
+
+  /* ——— Apple-like buttons ——— */
+  .eg-btn-apple {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium
+      transition duration-150 select-none active:scale-[0.97]
+      disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100;
+  }
+
+  .eg-btn-apple-primary {
+    @apply eg-btn-apple font-semibold text-black;
+    background: linear-gradient(180deg, #34d399 0%, #22c55e 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 4px 16px rgba(34, 197, 94, 0.3);
+  }
+
+  .eg-btn-apple-primary:hover:not(:disabled) {
+    background: linear-gradient(180deg, #4ade80 0%, #29c65f 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 6px 20px rgba(34, 197, 94, 0.4);
+  }
+
+  .eg-btn-apple-secondary {
+    @apply eg-btn-apple text-zinc-200;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .eg-btn-apple-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #fff;
+  }
+
+  .eg-icon-btn {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-400
+      transition duration-150 active:scale-90;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .eg-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+  }
+
+  /* ——— Segmented control (Apple-style tabs) ——— */
+  .eg-segmented {
+    @apply inline-flex rounded-xl p-1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .eg-segmented-item {
+    @apply rounded-lg px-3.5 py-1.5 text-xs font-medium text-zinc-400 transition duration-150;
+  }
+
+  .eg-segmented-item:hover:not(:disabled) {
+    color: #e4e4e7;
+  }
+
+  .eg-segmented-item.is-active {
+    @apply text-white;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .eg-segmented-item:disabled {
+    @apply cursor-not-allowed opacity-40;
+  }
+
+  /* ——— File drop zone ——— */
+  .eg-dropzone {
+    @apply flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl px-4 py-6
+      text-center transition duration-150;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1.5px dashed rgba(255, 255, 255, 0.14);
+  }
+
+  .eg-dropzone:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(34, 197, 94, 0.45);
+  }
+}
+
+/* Modal enter/leave transition (Apple sheet feel) */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.modal-enter-active .eg-sheet,
+.modal-leave-active .eg-sheet {
+  transition:
+    transform 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .eg-sheet,
+.modal-leave-to .eg-sheet {
+  transform: scale(0.96) translateY(8px);
+  opacity: 0;
 }

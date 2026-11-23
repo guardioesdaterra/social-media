@@ -1,199 +1,217 @@
 <template>
   <Transition name="modal">
-    <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="close">
-      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+    <div v-if="open" class="fixed inset-0 z-50" @click.self="close">
+      <div class="absolute inset-0 bg-black/55 backdrop-blur-2xl" aria-hidden="true" />
 
-      <div class="relative w-full max-w-[92vw] max-h-[85vh] bg-[var(--eg-panel)] border border-[var(--eg-border)] rounded-xl shadow-2xl flex flex-col overflow-hidden">
-        <div class="flex items-center justify-between gap-3 border-b border-[var(--eg-border)] px-4 py-3">
-          <h2 class="text-sm font-semibold text-white">
-            {{ siteUpdate ? 'Edit site update' : 'New site update' }}
-          </h2>
-          <button
-            class="eg-glass-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white"
-            @click="close"
-          >
-            ✕
+      <div class="eg-sheet absolute inset-0 flex flex-col overflow-hidden sm:inset-4 lg:inset-8">
+        <!-- Header -->
+        <header class="eg-sheet-header">
+          <div class="min-w-0">
+            <h2 class="text-[15px] font-semibold tracking-tight text-white">
+              {{ siteUpdate ? 'Edit site update' : 'New site update' }}
+            </h2>
+            <p class="mt-0.5 truncate text-xs text-zinc-500">
+              {{ siteUpdate ? 'Update this website page' : 'Publish a new website page' }}
+            </p>
+          </div>
+          <button type="button" class="eg-icon-btn shrink-0" aria-label="Close" @click="close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
           </button>
-        </div>
+        </header>
 
-        <form @submit.prevent="handleSubmit" class="p-4 space-y-3 flex-1 overflow-y-auto">
-          <!-- Title -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Title
-            </label>
-            <input
-              type="text"
-              class="eg-glass-input text-sm"
-              :value="form.title"
-              @input="form.title = ($event.target as HTMLInputElement).value"
-              maxlength="200"
-              placeholder="e.g. New restoration dashboard launched"
-              required
-            />
-          </div>
+        <!-- Body -->
+        <form id="siteupdate-editor-form" @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto">
+          <div class="mx-auto w-full max-w-3xl space-y-5 px-4 py-6 sm:px-6">
+            <!-- Details -->
+            <section class="eg-section">
+              <h3 class="eg-section-title">Details</h3>
+              <p class="eg-section-sub">Title, slug and publishing status.</p>
 
-          <!-- Slug -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              URL slug
-            </label>
-            <input
-              type="text"
-              class="eg-glass-input text-sm"
-              :value="form.slug"
-              @input="form.slug = ($event.target as HTMLInputElement).value"
-              maxlength="200"
-              placeholder="e.g. restoration-dashboard"
-              required
-            />
-            <p class="mt-1 text-[10px] text-zinc-500">Lowercase, digits and hyphens only.</p>
-          </div>
-
-          <!-- Status -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Status
-            </label>
-            <select class="eg-glass-input text-sm" v-model="form.status">
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-
-          <!-- Published at -->
-          <div v-if="form.status === 'published'">
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Published at
-            </label>
-            <input
-              type="datetime-local"
-              class="eg-glass-input text-sm"
-              :value="form.published_at"
-              @input="form.published_at = ($event.target as HTMLInputElement).value"
-            />
-          </div>
-
-          <!-- URL -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Page URL
-            </label>
-            <input
-              type="text"
-              class="eg-glass-input text-sm"
-              :value="form.url"
-              @input="form.url = ($event.target as HTMLInputElement).value"
-              placeholder="https://earthguardians.org/restoration-dashboard"
-            />
-          </div>
-
-          <!-- Content -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Content (HTML)
-            </label>
-            <textarea
-              class="eg-glass-input text-sm font-mono"
-              rows="12"
-              :value="form.content"
-              @input="form.content = ($event.target as HTMLTextAreaElement).value"
-              placeholder="<h1>Welcome</h1><p>...</p>"
-              required
-            ></textarea>
-            <p class="mt-1 text-[10px] text-zinc-500">{{ form.content.length }} chars.</p>
-          </div>
-
-          <!-- Wayback Integration Tabs -->
-          <div class="pt-3 border-t border-[var(--eg-border)]">
-            <div class="flex gap-1 mb-3">
-              <button
-                type="button"
-                class="px-3 py-1.5 text-xs rounded-lg transition-colors"
-                :class="waybackTab === 'snapshots' ? 'bg-[var(--eg-accent)] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'"
-                @click="waybackTab = 'snapshots'"
-              >
-                📸 Snapshots
-              </button>
-              <button
-                type="button"
-                class="px-3 py-1.5 text-xs rounded-lg transition-colors"
-                :class="waybackTab === 'diff' ? 'bg-[var(--eg-accent)] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'"
-                @click="waybackTab = 'diff'"
-                :disabled="waybackSnapshots.length < 2"
-              >
-                🔄 Compare
-              </button>
-            </div>
-
-            <!-- Snapshots Tab -->
-            <div v-if="waybackTab === 'snapshots'">
-              <WaybackPicker
-                :prefillUrl="form.url || undefined"
-                @snapshots="onSnapshotsLoaded"
-                @select="onSelectSnapshot"
-                @compare="onCompareSnapshots"
-              />
-
-              <!-- Snapshot preview iframe -->
-              <div v-if="previewSnapshot" class="mt-4 rounded-lg border border-[var(--eg-border)] bg-black overflow-hidden">
-                <div class="flex items-center justify-between px-3 py-2 border-b border-[var(--eg-border)] bg-zinc-900">
-                  <span class="text-xs text-zinc-400">Preview: {{ formatSnapshotDate(previewSnapshot.timestamp) }}</span>
-                  <button
-                    type="button"
-                    class="eg-glass-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white"
-                    @click="previewSnapshot = null"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div class="relative w-full h-[500px]">
-                  <iframe
-                    :src="previewReplayUrl"
-                    class="w-full h-full"
-                    sandbox="allow-same-origin allow-scripts"
-                    title="Wayback snapshot preview"
+              <div class="mt-4 space-y-4">
+                <div>
+                  <label class="eg-field-label" for="su-title">Title <span class="req">*</span></label>
+                  <input
+                    id="su-title"
+                    type="text"
+                    class="eg-field"
+                    :value="form.title"
+                    @input="form.title = ($event.target as HTMLInputElement).value"
+                    maxlength="200"
+                    placeholder="e.g. New restoration dashboard launched"
+                    required
                   />
                 </div>
-                <a
-                  :href="previewReplayUrl"
-                  target="_blank"
-                  rel="noopener"
-                  class="block px-3 py-2 text-xs text-[var(--eg-accent)] hover:underline border-t border-[var(--eg-border)]"
-                >
-                  Open in new tab ↗
-                </a>
+
+                <div>
+                  <label class="eg-field-label" for="su-slug">URL slug <span class="req">*</span></label>
+                  <input
+                    id="su-slug"
+                    type="text"
+                    class="eg-field"
+                    :value="form.slug"
+                    @input="form.slug = ($event.target as HTMLInputElement).value"
+                    maxlength="200"
+                    placeholder="e.g. restoration-dashboard"
+                    required
+                  />
+                  <p class="eg-hint">Lowercase, digits and hyphens only.</p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label class="eg-field-label" for="su-status">Status</label>
+                    <select id="su-status" class="eg-select" v-model="form.status">
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+                  <div v-if="form.status === 'published'">
+                    <label class="eg-field-label" for="su-published">Published at</label>
+                    <input
+                      id="su-published"
+                      type="datetime-local"
+                      class="eg-field [color-scheme:dark]"
+                      :value="form.published_at"
+                      @input="form.published_at = ($event.target as HTMLInputElement).value"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="eg-field-label" for="su-url">Page URL</label>
+                  <input
+                    id="su-url"
+                    type="url"
+                    class="eg-field"
+                    :value="form.url"
+                    @input="form.url = ($event.target as HTMLInputElement).value"
+                    placeholder="https://earthguardians.org/restoration-dashboard"
+                  />
+                </div>
               </div>
-            </div>
+            </section>
 
-            <!-- Diff Tab -->
-            <div v-if="waybackTab === 'diff' && waybackSnapshots.length >= 2">
-              <DiffViewer
-                :snapshots="waybackSnapshots"
-                :url="form.url || ''"
-                @change="onDiffChange"
-              />
-            </div>
-          </div>
+            <!-- Content -->
+            <section class="eg-section">
+              <div class="flex items-baseline justify-between gap-2">
+                <div>
+                  <h3 class="eg-section-title">Content</h3>
+                  <p class="eg-section-sub">HTML markup of the page.</p>
+                </div>
+                <span class="text-[11px] tabular-nums text-zinc-600">{{ form.content.length }} chars</span>
+              </div>
 
-          <div class="mt-4 flex justify-end gap-2">
-            <button type="button" class="eg-glass-btn-ghost !px-3 !py-1.5 text-xs" @click="close">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="eg-glass-btn-primary !px-4 !py-1.5 text-xs"
-              :disabled="saving || !form.title || !form.slug || !form.content"
-            >
-              <span v-if="saving" class="flex items-center gap-2">
-                <span class="h-3 w-3 animate-spin rounded-full border border-current border-r-transparent" />
-                Saving...
-              </span>
-              <span v-else>Save site update</span>
-            </button>
+              <div class="mt-4">
+                <textarea
+                  id="su-content"
+                  aria-label="Content HTML"
+                  class="eg-textarea font-mono text-[13px]"
+                  rows="12"
+                  :value="form.content"
+                  @input="form.content = ($event.target as HTMLTextAreaElement).value"
+                  placeholder="<h1>Welcome</h1><p>...</p>"
+                  required
+                ></textarea>
+              </div>
+            </section>
+
+            <!-- Wayback -->
+            <section class="eg-section">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 class="eg-section-title">Wayback Machine</h3>
+                  <p class="eg-section-sub">Snapshots and visual diffs from web.archive.org.</p>
+                </div>
+                <div class="eg-segmented" role="tablist" aria-label="Wayback views">
+                  <button
+                    type="button"
+                    role="tab"
+                    class="eg-segmented-item"
+                    :class="{ 'is-active': waybackTab === 'snapshots' }"
+                    :aria-selected="waybackTab === 'snapshots'"
+                    @click="waybackTab = 'snapshots'"
+                  >
+                    📸 Snapshots
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    class="eg-segmented-item"
+                    :class="{ 'is-active': waybackTab === 'diff' }"
+                    :aria-selected="waybackTab === 'diff'"
+                    :disabled="waybackSnapshots.length < 2"
+                    @click="waybackTab = 'diff'"
+                  >
+                    🔄 Compare
+                  </button>
+                </div>
+              </div>
+
+              <!-- Snapshots Tab -->
+              <div v-if="waybackTab === 'snapshots'" class="mt-4">
+                <WaybackPicker
+                  :prefillUrl="form.url || undefined"
+                  @snapshots="onSnapshotsLoaded"
+                  @select="onSelectSnapshot"
+                  @compare="onCompareSnapshots"
+                />
+
+                <!-- Snapshot preview iframe -->
+                <div v-if="previewSnapshot" class="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black">
+                  <div class="flex items-center justify-between border-b border-white/10 bg-white/[0.04] px-3 py-2 backdrop-blur">
+                    <span class="text-xs text-zinc-400">Preview: {{ formatSnapshotDate(previewSnapshot.timestamp) }}</span>
+                    <button type="button" class="eg-icon-btn h-6 w-6" aria-label="Close preview" @click="previewSnapshot = null">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                  <div class="relative h-[500px] w-full">
+                    <iframe
+                      :src="previewReplayUrl"
+                      class="h-full w-full"
+                      sandbox="allow-same-origin allow-scripts"
+                      title="Wayback snapshot preview"
+                    />
+                  </div>
+                  <a
+                    :href="previewReplayUrl"
+                    target="_blank"
+                    rel="noopener"
+                    class="block border-t border-white/10 px-3 py-2 text-xs text-[var(--eg-accent)] transition hover:bg-white/5 hover:underline"
+                  >
+                    Open in new tab ↗
+                  </a>
+                </div>
+              </div>
+
+              <!-- Diff Tab -->
+              <div v-if="waybackTab === 'diff' && waybackSnapshots.length >= 2" class="mt-4">
+                <DiffViewer
+                  :snapshots="waybackSnapshots"
+                  :url="form.url || ''"
+                  @change="onDiffChange"
+                />
+              </div>
+            </section>
           </div>
         </form>
+
+        <!-- Footer -->
+        <footer class="eg-sheet-footer">
+          <button type="button" class="eg-btn-apple-secondary" @click="close">Cancel</button>
+          <button
+            type="submit"
+            form="siteupdate-editor-form"
+            class="eg-btn-apple-primary"
+            :disabled="saving || !form.title || !form.slug || !form.content"
+          >
+            <span v-if="saving" class="flex items-center gap-2">
+              <span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/30 border-t-black" />
+              Saving…
+            </span>
+            <span v-else>{{ siteUpdate ? 'Save changes' : 'Create site update' }}</span>
+          </button>
+        </footer>
       </div>
     </div>
   </Transition>
@@ -235,7 +253,7 @@ const form = reactive<SiteUpdateDraft & { published_at: string }>({
   last_diff: '',
 })
 
-let saving = false
+const saving = ref(false)
 
 // Wayback state
 const waybackTab = ref<'snapshots' | 'diff'>('snapshots')
@@ -261,6 +279,7 @@ watch(
 
 function resetForm() {
   const u = props.siteUpdate
+  saving.value = false
   form.id = u?.id ?? ''
   form.title = u?.title ?? ''
   form.slug = u?.slug ?? ''
@@ -331,7 +350,7 @@ async function handleSubmit() {
     last_diff: form.last_diff || null,
   }
 
-  saving = true
+  saving.value = true
   emit('save', draft)
   // Do not close here: the parent closes the modal after the save promise resolves
 }

@@ -1,127 +1,139 @@
 <template>
   <Transition name="modal">
-    <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="close">
-      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+    <div v-if="open" class="fixed inset-0 z-50" @click.self="close">
+      <div class="absolute inset-0 bg-black/55 backdrop-blur-2xl" aria-hidden="true" />
 
-      <div class="relative w-full max-w-[92vw] max-h-[85vh] bg-[var(--eg-panel)] border border-[var(--eg-border)] rounded-xl shadow-2xl flex flex-col overflow-hidden">
-        <div class="flex items-center justify-between gap-3 border-b border-[var(--eg-border)] px-4 py-3">
-          <h2 class="text-sm font-semibold text-white">
-            {{ newsletter ? 'Edit newsletter' : 'New newsletter' }}
-          </h2>
-          <button
-            class="eg-glass-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-white"
-            @click="close"
-          >
-            ✕
+      <div class="eg-sheet absolute inset-0 flex flex-col overflow-hidden sm:inset-4 lg:inset-8">
+        <!-- Header -->
+        <header class="eg-sheet-header">
+          <div class="min-w-0">
+            <h2 class="text-[15px] font-semibold tracking-tight text-white">
+              {{ newsletter ? 'Edit newsletter' : 'New newsletter' }}
+            </h2>
+            <p class="mt-0.5 truncate text-xs text-zinc-500">
+              {{ newsletter ? 'Update this email newsletter' : 'Compose a new email newsletter' }}
+            </p>
+          </div>
+          <button type="button" class="eg-icon-btn shrink-0" aria-label="Close" @click="close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
           </button>
-        </div>
+        </header>
 
-        <form @submit.prevent="handleSubmit" class="p-4 space-y-3 flex-1 overflow-y-auto">
-          <!-- Title -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Title
-            </label>
-            <input
-              type="text"
-              class="eg-glass-input text-sm"
-              :value="form.title"
-              @input="form.title = ($event.target as HTMLInputElement).value"
-              maxlength="200"
-              placeholder="e.g. December 2026 — Year in Review"
-              required
-            />
-          </div>
+        <!-- Body -->
+        <form id="newsletter-editor-form" @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto">
+          <div class="mx-auto w-full max-w-3xl space-y-5 px-4 py-6 sm:px-6">
+            <!-- Details -->
+            <section class="eg-section">
+              <h3 class="eg-section-title">Details</h3>
+              <p class="eg-section-sub">Subject line and delivery status.</p>
 
-          <!-- Subject -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Email subject
-            </label>
-            <input
-              type="text"
-              class="eg-glass-input text-sm"
-              :value="form.subject"
-              @input="form.subject = ($event.target as HTMLInputElement).value"
-              maxlength="200"
-              placeholder="e.g. Our year in review + what's next"
-              required
-            />
-          </div>
+              <div class="mt-4 space-y-4">
+                <div>
+                  <label class="eg-field-label" for="nl-title">Title <span class="req">*</span></label>
+                  <input
+                    id="nl-title"
+                    type="text"
+                    class="eg-field"
+                    :value="form.title"
+                    @input="form.title = ($event.target as HTMLInputElement).value"
+                    maxlength="200"
+                    placeholder="e.g. December 2026 — Year in Review"
+                    required
+                  />
+                </div>
 
-          <!-- Status -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Status
-            </label>
-            <select class="eg-glass-input text-sm" v-model="form.status">
-              <option value="draft">Draft</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="sent">Sent</option>
-            </select>
-          </div>
+                <div>
+                  <label class="eg-field-label" for="nl-subject">Email subject <span class="req">*</span></label>
+                  <input
+                    id="nl-subject"
+                    type="text"
+                    class="eg-field"
+                    :value="form.subject"
+                    @input="form.subject = ($event.target as HTMLInputElement).value"
+                    maxlength="200"
+                    placeholder="e.g. Our year in review + what's next"
+                    required
+                  />
+                </div>
 
-          <!-- Scheduled at -->
-          <div v-if="form.status === 'scheduled'">
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Scheduled at
-            </label>
-            <input
-              type="datetime-local"
-              class="eg-glass-input text-sm"
-              :value="form.scheduled_at"
-              @input="form.scheduled_at = ($event.target as HTMLInputElement).value"
-            />
-          </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label class="eg-field-label" for="nl-status">Status</label>
+                    <select id="nl-status" class="eg-select" v-model="form.status">
+                      <option value="draft">Draft</option>
+                      <option value="scheduled">Scheduled</option>
+                      <option value="sent">Sent</option>
+                    </select>
+                  </div>
+                  <div v-if="form.status === 'scheduled'">
+                    <label class="eg-field-label" for="nl-scheduled">Scheduled at</label>
+                    <input
+                      id="nl-scheduled"
+                      type="datetime-local"
+                      class="eg-field [color-scheme:dark]"
+                      :value="form.scheduled_at"
+                      @input="form.scheduled_at = ($event.target as HTMLInputElement).value"
+                    />
+                  </div>
+                </div>
 
-          <!-- Recipient list -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Recipients (comma-separated emails)
-            </label>
-            <input
-              type="text"
-              class="eg-glass-input text-sm"
-              :value="form.recipient_list"
-              @input="form.recipient_list = ($event.target as HTMLInputElement).value"
-              placeholder="newsletter@earthguardians.org, updates@earthguardians.org"
-            />
-            <p class="mt-1 text-[10px] text-zinc-500">Leave blank to use the default mailing list.</p>
-          </div>
+                <div>
+                  <label class="eg-field-label" for="nl-recipients">Recipients</label>
+                  <input
+                    id="nl-recipients"
+                    type="text"
+                    class="eg-field"
+                    :value="form.recipient_list"
+                    @input="form.recipient_list = ($event.target as HTMLInputElement).value"
+                    placeholder="newsletter@earthguardians.org, updates@earthguardians.org"
+                  />
+                  <p class="eg-hint">Comma-separated emails. Leave blank to use the default mailing list.</p>
+                </div>
+              </div>
+            </section>
 
-          <!-- Body -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
-              Body (HTML)
-            </label>
-            <textarea
-              class="eg-glass-input text-sm font-mono"
-              rows="12"
-              :value="form.body"
-              @input="form.body = ($event.target as HTMLTextAreaElement).value"
-              placeholder="<p>Greetings EG Family!</p>..."
-              required
-            ></textarea>
-            <p class="mt-1 text-[10px] text-zinc-500">{{ form.body.length }} chars.</p>
-          </div>
+            <!-- Body -->
+            <section class="eg-section">
+              <div class="flex items-baseline justify-between gap-2">
+                <div>
+                  <h3 class="eg-section-title">Body</h3>
+                  <p class="eg-section-sub">HTML content of the email.</p>
+                </div>
+                <span class="text-[11px] tabular-nums text-zinc-600">{{ form.body.length }} chars</span>
+              </div>
 
-          <div class="mt-4 flex justify-end gap-2">
-            <button type="button" class="eg-glass-btn-ghost !px-3 !py-1.5 text-xs" @click="close">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="eg-glass-btn-primary !px-4 !py-1.5 text-xs"
-              :disabled="saving || !form.title || !form.subject || !form.body"
-            >
-              <span v-if="saving" class="flex items-center gap-2">
-                <span class="h-3 w-3 animate-spin rounded-full border border-current border-r-transparent" />
-                Saving...
-              </span>
-              <span v-else>Save newsletter</span>
-            </button>
+              <div class="mt-4">
+                <textarea
+                  id="nl-body"
+                  aria-label="Body HTML"
+                  class="eg-textarea font-mono text-[13px]"
+                  rows="14"
+                  :value="form.body"
+                  @input="form.body = ($event.target as HTMLTextAreaElement).value"
+                  placeholder="<p>Greetings EG Family!</p>..."
+                  required
+                ></textarea>
+              </div>
+            </section>
           </div>
         </form>
+
+        <!-- Footer -->
+        <footer class="eg-sheet-footer">
+          <button type="button" class="eg-btn-apple-secondary" @click="close">Cancel</button>
+          <button
+            type="submit"
+            form="newsletter-editor-form"
+            class="eg-btn-apple-primary"
+            :disabled="saving || !form.title || !form.subject || !form.body"
+          >
+            <span v-if="saving" class="flex items-center gap-2">
+              <span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/30 border-t-black" />
+              Saving…
+            </span>
+            <span v-else>{{ newsletter ? 'Save changes' : 'Create newsletter' }}</span>
+          </button>
+        </footer>
       </div>
     </div>
   </Transition>
@@ -129,7 +141,7 @@
 
 <script setup lang="ts">
 import type { Newsletter, NewsletterDraft } from '~/lib/types'
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
 
 const props = defineProps<{
@@ -158,7 +170,7 @@ const form = reactive<NewsletterDraft & { scheduled_at: string }>({
   recipient_list: '',
 })
 
-let saving = false
+const saving = ref(false)
 
 function close() {
   emit('update:open', false)
@@ -173,6 +185,7 @@ watch(
 
 function resetForm() {
   const n = props.newsletter
+  saving.value = false
   form.id = n?.id ?? ''
   form.title = n?.title ?? ''
   form.subject = n?.subject ?? ''
@@ -199,7 +212,7 @@ async function handleSubmit() {
     recipient_list: form.recipient_list || '',
   }
 
-  saving = true
+  saving.value = true
   emit('save', draft)
   // Do not close here: the parent closes the modal after the save promise
   // resolves. Closing now would lose the form if the server rejects it.

@@ -2,11 +2,12 @@
   <div class="wayback-picker">
     <!-- URL input -->
     <div class="mb-3">
-      <label class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
+      <label for="wb-url" class="block text-[11px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">
         Wayback Snapshot
       </label>
       <div class="flex gap-2">
         <input
+          id="wb-url"
           type="url"
           class="eg-input text-sm flex-1"
           v-model="urlInput"

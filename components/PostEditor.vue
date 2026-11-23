@@ -1,146 +1,191 @@
 <template>
   <Transition name="modal">
-    <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="close">
-      <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+    <div v-if="open" class="fixed inset-0 z-50" @click.self="close">
+      <div class="absolute inset-0 bg-black/55 backdrop-blur-2xl" aria-hidden="true" />
 
-      <div class="relative w-full max-w-[94vw] max-h-[90vh] eg-glass-panel rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-        <div class="flex items-center justify-between gap-3 border-b border-[var(--eg-border)]/40 px-4 py-3 z-10 bg-[var(--eg-panel)]/40 backdrop-blur-sm">
-          <h2 class="text-sm font-semibold text-white">
-            {{ post ? 'Edit post' : 'New post' }}
-          </h2>
-          <button class="eg-glass-btn-ghost !px-2 !py-1 text-[10px] text-zinc-400 hover:text-white" @click="close">
-            ✕
+      <div class="eg-sheet absolute inset-0 flex flex-col overflow-hidden sm:inset-4 lg:inset-8">
+        <!-- Header -->
+        <header class="eg-sheet-header">
+          <div class="min-w-0">
+            <h2 class="text-[15px] font-semibold tracking-tight text-white">
+              {{ post ? 'Edit post' : 'New post' }}
+            </h2>
+            <p class="mt-0.5 truncate text-xs text-zinc-500">
+              {{ post ? 'Update the scheduled social post' : 'Schedule a new social post' }}
+            </p>
+          </div>
+          <button type="button" class="eg-icon-btn shrink-0" aria-label="Close" @click="close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
           </button>
-        </div>
+        </header>
 
-        <form @submit.prevent="handleSubmit" class="p-4 space-y-3 flex-1 overflow-y-auto">
-          <!-- Day -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Date</label>
-            <input
-              type="date"
-              class="eg-glass-input text-sm"
-              :value="form.day"
-              @input="form.day = ($event.target as HTMLInputElement).value"
-              required
-            />
-          </div>
+        <!-- Body -->
+        <form id="post-editor-form" @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto">
+          <div class="mx-auto w-full max-w-3xl space-y-5 px-4 py-6 sm:px-6">
+            <!-- Schedule -->
+            <section class="eg-section">
+              <h3 class="eg-section-title">Schedule</h3>
+              <p class="eg-section-sub">When this post should go live.</p>
 
-          <!-- Scheduled time (optional) -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Scheduled time (optional)</label>
-            <input
-              type="time"
-              class="eg-glass-input text-sm"
-              :value="form.scheduled_at"
-              @input="form.scheduled_at = ($event.target as HTMLInputElement).value"
-            />
-            <p class="mt-1 text-[10px] text-zinc-500">Leave blank for an all-day post.</p>
-          </div>
-
-          <!-- Topic (REQUIRED) -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Topic <span class="text-red-400">*</span></label>
-            <select
-              class="eg-glass-input text-sm"
-              :value="form.topic_key"
-              @change="form.topic_key = ($event.target as HTMLSelectElement).value"
-              required
-            >
-              <option disabled value="">Select a topic</option>
-              <option v-for="t in topics" :key="t.key" :value="t.key">
-                {{ t.emoji }} {{ t.label }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Format & Status -->
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Format</label>
-              <select class="eg-glass-input text-sm" v-model="form.format">
-                <option v-for="f in FORMATS" :key="f" :value="f">{{ f }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Status</label>
-              <select class="eg-glass-input text-sm" v-model="form.status">
-                <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Title -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Title</label>
-            <input
-              type="text"
-              class="eg-glass-input text-sm"
-              :value="form.title"
-              @input="form.title = ($event.target as HTMLInputElement).value"
-              maxlength="300"
-              placeholder="e.g. Giving Tuesday — matched donation"
-            />
-          </div>
-
-          <!-- Caption -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Caption</label>
-            <textarea
-              class="eg-glass-input text-sm"
-              rows="4"
-              :value="form.caption"
-              @input="form.caption = ($event.target as HTMLTextAreaElement).value"
-              maxlength="10000"
-              placeholder="Greetings EG Family! ..."
-            ></textarea>
-            <p class="mt-1 text-[10px] text-zinc-500">{{ form.caption.length }} / 10000</p>
-          </div>
-
-          <!-- Hashtags -->
-          <div>
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Hashtags</label>
-            <input
-              type="text"
-              class="eg-glass-input text-sm"
-              :value="form.hashtags"
-              @input="form.hashtags = ($event.target as HTMLInputElement).value"
-              placeholder="#EarthGuardians #ClimateAction"
-            />
-            <p class="mt-1 text-[10px] text-zinc-500">Space-separated.</p>
-          </div>
-
-          <!-- Image (base64, full quality) -->
-          <div class="pt-2 border-t border-[var(--eg-border)]">
-            <label class="block text-[10px] font-medium text-zinc-400 mb-1 uppercase tracking-wider">Image (full quality, stored in Postgres)</label>
-            <input type="file" accept="image/*" class="block w-full text-sm text-zinc-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-[var(--eg-accent)] file:text-black hover:file:bg-[var(--eg-accent)]/90" @change="onImage" />
-            <p class="mt-1 text-[10px] text-zinc-500">Max 4 MB. Replaces any existing image.</p>
-
-            <div v-if="imagePreview" class="mt-2 relative">
-              <img :src="imagePreview" alt="" class="h-24 w-32 rounded object-cover border border-[var(--eg-border)]" />
-              <div class="absolute -top-2 -right-2 bg-red-950/90 text-[10px] px-1.5 py-0.5 rounded text-red-100">
-                {{ formatBytes(imageBytes) }}
+              <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label class="eg-field-label" for="post-date">Date <span class="req">*</span></label>
+                  <input
+                    id="post-date"
+                    type="date"
+                    class="eg-field [color-scheme:dark]"
+                    :value="form.day"
+                    @input="form.day = ($event.target as HTMLInputElement).value"
+                    required
+                  />
+                </div>
+                <div>
+                  <label class="eg-field-label" for="post-time">Scheduled time</label>
+                  <input
+                    id="post-time"
+                    type="time"
+                    class="eg-field [color-scheme:dark]"
+                    :value="form.scheduled_at ?? ''"
+                    @input="form.scheduled_at = ($event.target as HTMLInputElement).value || null"
+                  />
+                  <p class="eg-hint">Leave blank for an all-day post.</p>
+                </div>
               </div>
-              <button
-                class="absolute -top-2 -right-2 z-10 eg-glass-btn-ghost !px-1.5 !py-1 text-[10px] text-red-400 hover:text-red-300"
-                @click="clearImage"
-              >
-                ✕
-              </button>
-              <button
-                class="mt-2 eg-glass-btn-ghost !px-3 !py-1 text-[10px] text-zinc-400 hover:text-zinc-200"
-                @click="downloadImage"
-              >
-                ⤓ Download full quality
-              </button>
-            </div>
-          </div>
+            </section>
 
-          <div class="mt-4 flex justify-end gap-2">
-            <button type="button" class="eg-glass-btn-ghost !px-3 !py-1.5 text-xs" @click="close">Cancel</button>
-            <button type="submit" class="eg-glass-btn-primary !px-4 !py-1.5 text-xs" :disabled="saving">Save post</button>
+            <!-- Classification -->
+            <section class="eg-section">
+              <h3 class="eg-section-title">Classification</h3>
+              <p class="eg-section-sub">Topic, format and workflow status.</p>
+
+              <div class="mt-4 space-y-4">
+                <div>
+                  <label class="eg-field-label" for="post-topic">Topic <span class="req">*</span></label>
+                  <select
+                    id="post-topic"
+                    class="eg-select"
+                    :value="form.topic_key"
+                    @change="form.topic_key = ($event.target as HTMLSelectElement).value"
+                    required
+                  >
+                    <option disabled value="">Select a topic</option>
+                    <option v-for="t in topics" :key="t.key" :value="t.key">
+                      {{ t.emoji }} {{ t.label }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label class="eg-field-label" for="post-format">Format</label>
+                    <select id="post-format" class="eg-select" v-model="form.format">
+                      <option v-for="f in FORMATS" :key="f" :value="f">{{ f }}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="eg-field-label" for="post-status">Status</label>
+                    <select id="post-status" class="eg-select" v-model="form.status">
+                      <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Content -->
+            <section class="eg-section">
+              <h3 class="eg-section-title">Content</h3>
+              <p class="eg-section-sub">What your audience will see.</p>
+
+              <div class="mt-4 space-y-4">
+                <div>
+                  <label class="eg-field-label" for="post-title">Title</label>
+                  <input
+                    id="post-title"
+                    type="text"
+                    class="eg-field"
+                    :value="form.title"
+                    @input="form.title = ($event.target as HTMLInputElement).value"
+                    maxlength="300"
+                    placeholder="e.g. Giving Tuesday — matched donation"
+                  />
+                </div>
+
+                <div>
+                  <div class="flex items-baseline justify-between gap-2">
+                    <label class="eg-field-label" for="post-caption">Caption</label>
+                    <span class="text-[11px] tabular-nums" :class="form.caption.length > 9000 ? 'text-amber-400' : 'text-zinc-600'">
+                      {{ form.caption.length }} / 10000
+                    </span>
+                  </div>
+                  <textarea
+                    id="post-caption"
+                    class="eg-textarea"
+                    rows="5"
+                    :value="form.caption"
+                    @input="form.caption = ($event.target as HTMLTextAreaElement).value"
+                    maxlength="10000"
+                    placeholder="Greetings EG Family! ..."
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label class="eg-field-label" for="post-tags">Hashtags</label>
+                  <input
+                    id="post-tags"
+                    type="text"
+                    class="eg-field"
+                    :value="form.hashtags"
+                    @input="form.hashtags = ($event.target as HTMLInputElement).value"
+                    placeholder="#EarthGuardians #ClimateAction"
+                  />
+                  <p class="eg-hint">Space-separated.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Media -->
+            <section class="eg-section">
+              <h3 class="eg-section-title">Media</h3>
+              <p class="eg-section-sub">Full quality image, stored in Postgres.</p>
+
+              <div class="mt-4 space-y-3">
+                <label class="eg-dropzone">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="1.6" /><path d="m21 15-4.2-4.2a2 2 0 0 0-2.8 0L4 21" /></svg>
+                  <span class="text-sm font-medium text-zinc-300">Click to choose an image</span>
+                  <span class="text-[11px] text-zinc-500">PNG, JPG or WebP · max 4 MB · replaces any existing image</span>
+                  <input type="file" accept="image/*" class="sr-only" @change="onImage" />
+                </label>
+
+                <div v-if="imagePreview" class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                  <img :src="imagePreview" alt="" class="h-16 w-24 shrink-0 rounded-lg object-cover ring-1 ring-white/10" />
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-xs font-medium text-zinc-200">Current image</p>
+                    <p class="mt-0.5 text-[11px] text-zinc-500">{{ formatBytes(imageBytes) }}</p>
+                  </div>
+                  <button type="button" class="eg-btn-apple-secondary rounded-lg px-3 py-1.5 text-xs" @click="downloadImage">
+                    ⤓ Download
+                  </button>
+                  <button type="button" class="eg-icon-btn text-red-400" aria-label="Remove image" @click="clearImage">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </div>
+            </section>
           </div>
         </form>
+
+        <!-- Footer -->
+        <footer class="eg-sheet-footer">
+          <button type="button" class="eg-btn-apple-secondary" @click="close">Cancel</button>
+          <button type="submit" form="post-editor-form" class="eg-btn-apple-primary" :disabled="saving">
+            <span v-if="saving" class="flex items-center gap-2">
+              <span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/30 border-t-black" />
+              Saving…
+            </span>
+            <span v-else>{{ post ? 'Save changes' : 'Create post' }}</span>
+          </button>
+        </footer>
       </div>
     </div>
   </Transition>
@@ -196,8 +241,8 @@ const form = reactive<{
 
 const saving = ref(false)
 
-let imagePreview: string | null = null
-let imageBytes = 0
+const imagePreview = ref<string | null>(null)
+const imageBytes = ref(0)
 
 function close() {
   emit('update:open', false)
@@ -213,6 +258,7 @@ watch(
 function resetForm() {
   const post = props.post
   const baseDay = post ? post.day : props.day
+  saving.value = false
   form.id = post?.id ?? ''
   form.day = post ? post.day : baseDay
   form.scheduled_at = post?.scheduled_at ?? null
@@ -222,8 +268,8 @@ function resetForm() {
   form.title = post?.title ?? ''
   form.caption = post?.caption ?? ''
   form.hashtags = post?.hashtags ?? ''
-  imagePreview = post?.image_base64 ?? null
-  imageBytes = post?.image_bytes ?? 0
+  imagePreview.value = post?.image_base64 ?? null
+  imageBytes.value = post?.image_bytes ?? 0
 }
 
 function onImage(event: Event) {
@@ -234,16 +280,16 @@ function onImage(event: Event) {
   reader.onload = () => {
     const dataUrl = String(reader.result || '')
     form.image_base64 = dataUrl
-    imagePreview = dataUrl
-    imageBytes = Math.floor(((dataUrl.split(',')[1] || '').length * 3) / 4)
+    imagePreview.value = dataUrl
+    imageBytes.value = Math.floor(((dataUrl.split(',')[1] || '').length * 3) / 4)
   }
   reader.readAsDataURL(file)
 }
 
 function clearImage() {
   form.image_base64 = null
-  imagePreview = null
-  imageBytes = 0
+  imagePreview.value = null
+  imageBytes.value = 0
 }
 
 async function downloadImage() {
@@ -273,7 +319,7 @@ async function handleSubmit() {
   if (form.image_base64) {
     draft.image_base64 = form.image_base64
     draft.image_name = 'upload'
-    draft.image_bytes = imageBytes
+    draft.image_bytes = imageBytes.value
   } else if (props.post) {
     // explicit clear when editing and image removed
     draft.image_base64 = null
