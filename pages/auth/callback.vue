@@ -16,7 +16,7 @@
 <script setup lang="ts">
 import { edgeFunctionUrl } from '~/lib/supabase'
 
-const { exchangeCode, bootstrap, isManager, phase, session } = useSupabaseAuth()
+const { exchangeCode, bootstrap, isManager, phase, session, signInWithGoogle, callbackUrl } = useSupabaseAuth()
 const router = useRouter()
 const route = useRoute()
 
@@ -129,14 +129,26 @@ onMounted(async () => {
         return
       }
     } else if (session.value) {
-      // Already have session (e.g., from redirect)
+      // Already have session (e.g., restored from storage after redirect)
       showSuccessAndClose('Authentication successful! Closing…')
       await storeProviderToken()
       await relaySessionToOpener(session.value)
       await closePopup()
       return
     }
-    message.value = 'No authorization code found. Please sign in again.'
+    // No code yet: start Google OAuth inside this popup so the user actually
+    // reaches the Google login page. signInWithOAuth navigates the popup to
+    // Google; after login Google redirects back to this same callback URL
+    // (?popup=1 is preserved so the relay logic above runs on the way back).
+    const next = urlParams.get('next')
+    const authRedirect = `${callbackUrl()}?popup=1${next ? `&next=${encodeURIComponent(next)}` : ''}`
+    const err = await signInWithGoogle({ redirectTo: authRedirect })
+    if (err) {
+      message.value = err
+      return
+    }
+    // signInWithOAuth redirects the popup to Google OAuth; nothing more to
+    // do here until Google redirects back with ?code.
     return
   }
 

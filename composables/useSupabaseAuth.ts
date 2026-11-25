@@ -147,7 +147,7 @@ export function useSupabaseAuth() {
     return `${window.location.origin}${base.replace(/\/$/, '')}/auth/callback`
   }
 
-  async function signInWithGoogle(): Promise<string | null> {
+  async function signInWithGoogle(options: { redirectTo?: string } = {}): Promise<string | null> {
     authError.value = null
     if (mock) {
       manager.value = { ...MOCK_MANAGER }
@@ -161,10 +161,11 @@ export function useSupabaseAuth() {
       // `access_type: 'offline'` + `prompt: 'consent'` are required to
       // receive a refresh_token so we can re-authorise after the 1-hour
       // provider_token expiry.
+      const redirectTo = options.redirectTo ?? callbackUrl()
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: callbackUrl(),
+          redirectTo,
           scopes: 'openid email profile https://www.googleapis.com/auth/gmail.send',
           queryParams: {
             prompt: 'consent',
@@ -224,6 +225,7 @@ export function useSupabaseAuth() {
     phase: readonly(phase),
     manager: readonly(manager),
     authError: readonly(authError),
+    callbackUrl,
     bootstrap,
     signInWithGoogle,
     exchangeCode,
