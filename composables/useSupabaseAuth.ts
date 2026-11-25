@@ -184,7 +184,13 @@ export function useSupabaseAuth() {
   /** Exchanges the `code` in the URL for a session (Supabase PKCE flow). */
   async function exchangeCode(): Promise<boolean> {
     try {
-      const { error } = await supabase.auth.exchangeCodeForSession(window.location.href)
+      const code = new URL(window.location.href).searchParams.get('code')
+      if (!code) {
+        authError.value = 'No authorization code found in URL.'
+        phase.value = 'anonymous'
+        return false
+      }
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
       if (error) throw error
       session.value = (await supabase.auth.getSession()).data.session
       await evaluateGate()
