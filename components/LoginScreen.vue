@@ -32,6 +32,9 @@
       <p v-if="authError" class="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
         {{ authError }}
       </p>
+      <p v-if="loginError" class="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+        {{ loginError }}
+      </p>
       <p v-if="status" class="mt-4 text-xs text-zinc-500">{{ status }}</p>
     </div>
 
@@ -40,15 +43,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { MANAGER_DOMAIN } from '~/lib/constants'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
+import { usePopupAuth } from '~/composables/usePopupAuth'
 const { authError, signInWithGoogle, bootstrap, phase } = useSupabaseAuth()
+const { signInWithPopup } = usePopupAuth()
 const router = useRouter()
 
 const busy = ref(false)
 const status = ref('')
+const loginError = ref('')
+
+// Detect if we're embedded in an iframe (SquareSpace or similar)
+const isEmbedded = computed(() => {
+  try {
+    return window.self !== window.top
+  } catch {
+    return true // Cross-origin iframe access -> embedded
+  }
+})
 
 onMounted(async () => {
   await bootstrap()
@@ -57,11 +72,31 @@ onMounted(async () => {
 
 async function onSignIn() {
   busy.value = true
-  status.value = 'Redirecting to Google…'
+  status.value = 'Starting authentication…'
+  loginError.value = ''
+  
   try {
-    const err = await signInWithGoogle()
-    if (err) status.value = ''
-    // Navigation happens via OAuth redirect.
+    if (isEmbedded) {
+      // Popup mode for embedded contexts
+      const result = await signInWithPopup()
+      if (result.success) {
+        status.value = 'Authentication successful! Closing…'
+        await router.replace('/calendario')
+      } else {
+        status.value = ''
+        if (result.error) {
+          loginError.value = result.error
+        }
+      }
+    } else {
+      // Redirect mode for direct access
+      const err = await signInWithGoogle()
+      if (err) {
+        status.value = ''
+        loginError.value = err
+      }
+      // Navigation happens via OAuth redirect.
+    }
   } finally {
     busy.value = false
   }

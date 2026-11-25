@@ -23,6 +23,47 @@ const route = useRoute()
 const message = ref('')
 const ok = ref(false)
 
+// Check if this is a popup relay flow
+const isPopupRelay = computed(() => {
+  const params = new URLSearchParams(window.location.search)
+  return params.has('popup')
+})
+
+// Show success message in popup before closing
+function showSuccessAndClose(messageText: string) {
+  message.value = messageText
+  ok.value = true
+}
+
+// Relay session back to opener popup and close
+async function relaySessionToOpener(session: any) {
+  if (!window.opener) return
+
+  try {
+    window.opener.postMessage(
+      {
+        source: 'eg-auth',
+        type: 'auth:session',
+        payload: {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        },
+      },
+      window.location.origin,
+    )
+  } catch (err) {
+    console.error('[callback] Failed to postMessage to opener', err)
+  }
+}
+
+// Close popup after relay (2 seconds to ensure opener receives message)
+async function closePopup() {
+  await new Promise((resolve) => setTimeout(resolve, 2000))
+  if (window.opener && !window.opener.closed) {
+    window.close()
+  }
+}
+
 /**
  * After a successful PKCE code exchange, Supabase embeds the Google
  * provider_token and provider_refresh_token in the session object.
@@ -59,20 +100,51 @@ async function storeProviderToken() {
 onMounted(async () => {
   await bootstrap()
 
-  if (isManager.value) {
-    await storeProviderToken()
-    await router.replace('/calendario')
-    return
-  }
-
+  // Handle error from OAuth provider
   const error = route.query.error_description || route.query.error
   if (typeof error === 'string' && error) {
     message.value = decodeURIComponent(error)
     return
   }
 
+  // Check for authorization code
   const code = route.query.code
-  if (typeof code === 'string' && code) {
+  const hasCode = typeof code === 'string' && code
+
+  // If popup mode, exchange code and relay session
+  if (isPopupRelay.value) {
+    if (hasCode) {
+      const passed = await exchangeCode()
+      if (passed && session.value) {
+        showSuccessAndClose('Authentication successful! Closing…')
+        await storeProviderToken()
+        await relaySessionToOpener(session.value)
+        await closePopup()
+        return
+      } else {
+        message.value = 'Sign-in could not be completed.'
+        return
+      }
+    } else if (session.value) {
+      // Already have session (e.g., from redirect)
+      showSuccessAndClose('Authentication successful! Closing…')
+      await storeProviderToken()
+      await relaySessionToOpener(session.value)
+      await closePopup()
+      return
+    }
+    message.value = 'No authorization code found. Please sign in again.'
+    return
+  }
+
+  // Regular (non-popup) mode - redirect-based flow
+  if (isManager.value) {
+    await storeProviderToken()
+    await router.replace('/calendario')
+    return
+  }
+
+  if (hasCode) {
     const passed = await exchangeCode()
     if (passed) {
       ok.value = true

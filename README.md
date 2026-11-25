@@ -61,6 +61,17 @@ Each content type has a matching "get" edge function (`calendar-get`, `newslette
 - Only managers can open the panel or save changes. Everyone else sees a "access restricted" screen.
 - In development you can run `pnpm dev:mock` to use a fake manager account without Google or Supabase.
 
+### Popup-based OAuth for embedded contexts
+
+When embedded in SquareSpace or other third-party sites, the app automatically switches to a **popup-based OAuth flow** to work around Google's `X-Frame-Options: DENY` restriction:
+
+1. **Auto-detection**: The app detects when running inside an iframe (via `window.self !== window.top`)
+2. **Popup opens**: Instead of redirecting the iframe, a popup window opens for Google OAuth
+3. **Session relay**: After authentication, the callback posts the session back to the opener via `postMessage`
+4. **Popup closes**: The popup automatically closes, and the parent page redirects to the calendar
+
+See `docs/popup-auth.md` for full implementation details.
+
 ### Calendar math (no date library)
 
 `lib/calendar.ts` is a small, pure, testable module that handles months, days-per-month, leap years, weekday offsets, and week grids — with no `date-fns` or similar dependency. Weeks start on Sunday.
@@ -90,6 +101,17 @@ pnpm dev:mock   # http://localhost:3000
 # 4. Or run with real Supabase
 pnpm dev        # http://localhost:3000, then sign in with Google
 ```
+
+### Testing popup auth in embedded context
+
+To test the popup flow, embed the app in an iframe:
+
+```html
+<!-- In a local HTML file or dev server -->
+<iframe src="http://localhost:3000" width="800" height="600"></iframe>
+```
+
+Then click "Sign in with Google" — a popup should open instead of redirecting.
 
 Log in with any `@earthguardians.org` Google account to open the editorial panel.
 
@@ -132,6 +154,12 @@ git push origin master
 | `pnpm lint` | Run ESLint |
 | `pnpm lint:fix` | Auto-fix lint issues |
 | `pnpm supabase:deploy` | Push migrations + deploy Edge Functions |
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| `docs/popup-auth.md` | Full implementation details for popup-based OAuth in embedded contexts |
 
 ## Project structure (top level)
 

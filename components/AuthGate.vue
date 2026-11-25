@@ -46,6 +46,15 @@ const toast = useToast()
 
 const managerEmail = computed(() => session.value?.user?.email || '')
 
+// Detect if we're embedded
+const isEmbedded = computed(() => {
+  try {
+    return window.self !== window.top
+  } catch {
+    return true
+  }
+})
+
 onMounted(async () => {
   const { bootstrap } = useSupabaseAuth()
   await bootstrap()
@@ -58,8 +67,22 @@ async function onSignOut() {
 
 async function switchAccount() {
   await signOut()
-  const err = await signInWithGoogle()
-  if (err) toast.error(err)
-  else await router.push('/login')
+  
+  if (isEmbedded) {
+    // In embedded mode, use popup
+    const { signInWithPopup } = usePopupAuth()
+    const result = await signInWithPopup()
+    if (result.success) {
+      toast.success('Authentication successful!')
+      await router.push('/login')
+    } else {
+      toast.error(result.error || 'Authentication failed')
+    }
+  } else {
+    // In direct access, use redirect
+    const err = await signInWithGoogle()
+    if (err) toast.error(err)
+    else await router.push('/login')
+  }
 }
 </script>
