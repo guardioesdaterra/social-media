@@ -100,16 +100,19 @@ async function storeProviderToken() {
 onMounted(async () => {
   await bootstrap()
 
+  // Use window.location for client-side URL parsing (more reliable after OAuth redirect)
+  const urlParams = new URL(window.location.href).searchParams
+
   // Handle error from OAuth provider
-  const error = route.query.error_description || route.query.error
-  if (typeof error === 'string' && error) {
+  const error = urlParams.get('error_description') || urlParams.get('error')
+  if (error) {
     message.value = decodeURIComponent(error)
     return
   }
 
   // Check for authorization code
-  const code = route.query.code
-  const hasCode = typeof code === 'string' && code
+  const code = urlParams.get('code')
+  const hasCode = !!code
 
   // If popup mode, exchange code and relay session
   if (isPopupRelay.value) {
