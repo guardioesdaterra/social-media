@@ -1,9 +1,11 @@
 <template>
   <div class="mx-auto flex max-w-md flex-col items-center py-16 text-center">
-    <span
-      class="grid h-14 w-14 place-items-center rounded-2xl bg-[var(--eg-accent)] text-lg font-black text-black"
+    <img
+      src="/EG-Logo.webp"
+      alt="Earth Guardians"
+      class="h-14 w-14 shrink-0 rounded-2xl object-contain"
       aria-hidden="true"
-    >EG</span>
+    />
     <h1 class="mt-5 text-2xl font-semibold text-white">Social Media</h1>
     <p class="mt-1.5 text-sm text-zinc-400">Editorial calendar for @earthguardians</p>
 

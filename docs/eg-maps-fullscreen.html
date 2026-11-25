@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>EG-Maps | Grants</title>
+  <style>
+    /* Reset all margins/padding */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Full viewport - handle all browsers and zoom levels */
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0a0a0a;
+    }
+
+    /* 100% fixed iframe */
+    iframe {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      
+      /* Smooth scrolling for iOS */
+      -webkit-overflow-scrolling: touch;
+      
+      /* Prevent any unwanted scrolling */
+      overflow: hidden;
+    }
+
+    /* Hide any potential scrollbars on html/body */
+    html {
+      overflow: -moz-hidden-unscrollable;
+      overflow: hidden;
+      -ms-overflow-style: none;
+    }
+    html::-webkit-scrollbar {
+      display: none;
+    }
+    body::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Safe area inset for notched devices */
+    @supports (padding: max(0px)) {
+      html {
+        padding-top: max(0px, env(safe-area-inset-top));
+        padding-bottom: max(0px, env(safe-area-inset-bottom));
+        padding-left: max(0px, env(safe-area-inset-left));
+        padding-right: max(0px, env(safe-area-inset-right));
+      }
+    }
+
+    /* 130%+ zoom support - ensure no white space */
+    @media screen and (min-resolution: 1.3dppx), 
+           (min--moz-device-pixel-ratio: 1.3), 
+           (-webkit-min-device-pixel-ratio: 1.3),
+           (min-resolution: 130dpi) {
+      html, body {
+        height: 100dvh; /* Dynamic viewport height */
+        width: 100vw;
+      }
+      
+      iframe {
+        height: 100dvh;
+        width: 100vw;
+      }
+    }
+
+    /* Ultra-wide screens */
+    @media (min-width: 2000px) {
+      iframe {
+        /* Ensure full coverage on ultra-wide */
+        min-width: 100vw;
+        min-height: 100vh;
+      }
+    }
+
+    /* Prevent bounce effect on iOS */
+    html, body {
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: none;
+    }
+
+    /* Force GPU acceleration for smoother rendering */
+    iframe {
+      will-change: transform;
+      transform: translateZ(0);
+    }
+
+    /* Loading state */
+    body:not(.loaded) iframe {
+      opacity: 0;
+    }
+    
+    body.loaded iframe {
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <iframe
+    src="https://guardioesdaterra.github.io/social-media/"
+    title="EG-Maps Grants"
+    allow="clipboard-write; fullscreen"
+    allowfullscreen
+    loading="eager"
+  ></iframe>
+
+  <script>
+    // Mark as loaded when iframe loads
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.classList.add('loaded');
+    });
+
+    // Ensure fullscreen on all zoom levels
+    function ensureFullscreen() {
+      const iframe = document.querySelector('iframe');
+      if (!iframe) return;
+
+      // Force 100vw/100vh
+      iframe.style.width = '100vw';
+      iframe.style.height = '100vh';
+      
+      // Also set via setAttribute for consistency
+      iframe.setAttribute('width', '100%');
+      iframe.setAttribute('height', '100%');
+    }
+
+    // Run on load and periodically check (for zoom changes)
+    window.addEventListener('load', ensureFullscreen);
+    
+    // Also handle orientation change and resize
+    window.addEventListener('resize', ensureFullscreen);
+    window.addEventListener('orientationchange', function() {
+      setTimeout(ensureFullscreen, 100);
+    });
+
+    // Handle browser zoom level changes
+    let lastZoom = window.devicePixelRatio;
+    setInterval(function() {
+      if (window.devicePixelRatio !== lastZoom) {
+        lastZoom = window.devicePixelRatio;
+        ensureFullscreen();
+      }
+    }, 500);
+
+    // Prevent default touch behaviors that could cause scrolling
+    document.addEventListener('touchmove', function(e) {
+      if (e.target === document.documentElement || e.target === document.body) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  </script>
+</body>
+</html>

@@ -8,6 +8,7 @@ export const ALLOWED_ORIGINS = [
   'https://www.earthguardians.org',
   'https://app.earthguardians.org',
   'https://calendar.earthguardians.org',
+  'https://eg-maps.grants.earthguardians.org',
 ]
 
 /** Domain that grants manager access to the panel. */
