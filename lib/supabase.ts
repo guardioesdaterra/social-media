@@ -23,7 +23,7 @@ export function useSupabase(): SupabaseClient {
   client = createClient(url || 'https://invalid.supabase.co', key || 'anon-missing', {
     auth: {
       persistSession: true,
-      autoRefreshToken: true,
+      autoRefreshToken: false,
       detectSessionInUrl: true,
       storageKey: 'eg-social-auth',
     },

@@ -58,7 +58,7 @@ import type { ContextMenuEntry } from '~/composables/useContextMenu'
 import { WORLD_TIMEZONES } from '~/composables/useAppClock'
 
 const { phase, manager, isManager, signOut } = useSupabaseAuth()
-const { now, timezone, isUtc, formatted, tzLabel, setTimezone } = useAppClock()
+const { now, timezone, isUtc, formatted, timeOnly, tzLabel, setTimezone } = useAppClock()
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
