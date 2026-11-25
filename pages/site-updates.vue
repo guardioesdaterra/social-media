@@ -71,10 +71,10 @@
               <div class="flex-1 min-w-0">
                 <h3 class="text-sm font-semibold text-white truncate">{{ u.title }}</h3>
                 <p class="text-[11px] text-zinc-400 truncate">{{ u.slug }}</p>
-                <div class="flex items-center gap-2 mt-1">
-                  <span class="text-[10px] text-zinc-500">{{ u.created_at }}</span>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                  <span class="text-[10px] text-zinc-500">{{ formatDateTime(u.created_at) }}</span>
                   <span v-if="u.published_at" class="text-[10px] text-green-400">
-                    · published {{ u.published_at }}
+                    ✓ {{ formatDateTime(u.published_at) }}
                   </span>
                   <span v-if="u.url" class="text-[10px] text-zinc-500">
                     · {{ u.url }}
@@ -170,6 +170,19 @@ function statusColor(status: string): string {
     case 'archived': return '#71717a'
     default: return '#71717a'
   }
+}
+
+function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
 }
 
 function openEditor(u?: SiteUpdate) {

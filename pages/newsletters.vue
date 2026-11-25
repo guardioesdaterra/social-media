@@ -71,12 +71,12 @@
               <div class="flex-1 min-w-0">
                 <h3 class="text-sm font-semibold text-white truncate">{{ n.title }}</h3>
                 <p class="text-[11px] text-zinc-400 truncate">{{ n.subject }}</p>
-                <div class="flex items-center gap-2 mt-1">
-                  <span class="text-[10px] text-zinc-500">{{ n.created_at }}</span>
-                  <span v-if="n.scheduled_at" class="text-[10px] text-zinc-500">
-                    · scheduled {{ n.scheduled_at }}
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                  <span class="text-[10px] text-zinc-500">{{ formatDateTime(n.created_at) }}</span>
+                  <span v-if="n.scheduled_at" class="text-[10px] text-yellow-400">
+                    📅 {{ formatDateTime(n.scheduled_at) }}
                   </span>
-                  <span v-if="n.sent_at" class="text-[10px] text-green-400">· sent {{ n.sent_at }}</span>
+                  <span v-if="n.sent_at" class="text-[10px] text-green-400">✓ {{ formatDateTime(n.sent_at) }}</span>
                 </div>
               </div>
               <div class="flex items-center gap-1">
@@ -161,6 +161,19 @@ function statusColor(status: string): string {
     case 'sent': return '#22c55e'
     default: return '#71717a'
   }
+}
+
+function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
 }
 
 function openEditor(n?: Newsletter) {

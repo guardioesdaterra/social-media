@@ -3,45 +3,19 @@
     class="sticky top-0 z-50 border-b border-[var(--eg-border)] bg-black/80 backdrop-blur-xl"
     @contextmenu.prevent="onHeaderContext"
   >
-    <div class="mx-auto flex h-14 max-w-[1680px] items-center gap-3 px-3 sm:px-5">
-      <NuxtLink to="/calendario" class="flex items-center gap-2.5 shrink-0" aria-label="Home">
+    <div class="mx-auto flex h-14 max-w-[1680px] items-center justify-between gap-3 px-3 sm:px-5">
+      <!-- Left: Minimal icon link -->
+      <NuxtLink to="/calendario" class="flex items-center gap-2 shrink-0" aria-label="Home">
         <img
           src="/EG-Logo.webp"
           alt="EG"
-          class="h-8 w-auto shrink-0 object-contain"
+          class="h-7 w-7 shrink-0 object-contain"
           aria-hidden="true"
         />
-        <span class="hidden leading-tight sm:block">
-          <span class="block text-sm font-semibold text-white">Social Media</span>
-          <span class="block text-[11px] text-zinc-500">Editorial calendar · @earthguardians</span>
-        </span>
       </NuxtLink>
 
-      <nav class="ml-2 flex items-center gap-1" aria-label="Primary">
-        <NuxtLink
-          to="/calendario"
-          class="rounded-lg px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
-          :class="{ 'bg-white/10 text-white': $route.path.startsWith('/calendario') }"
-        >
-          Calendar
-        </NuxtLink>
-        <NuxtLink
-          to="/newsletters"
-          class="rounded-lg px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
-          :class="{ 'bg-white/10 text-white': $route.path.startsWith('/newsletters') }"
-        >
-          Newsletters
-        </NuxtLink>
-        <NuxtLink
-          to="/site-updates"
-          class="rounded-lg px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
-          :class="{ 'bg-white/10 text-white': $route.path.startsWith('/site-updates') }"
-        >
-          Site updates
-        </NuxtLink>
-      </nav>
-
-      <div class="flex-1 flex items-center justify-center gap-2">
+      <!-- Center: Clock -->
+      <div class="flex items-center gap-2">
         <span class="hidden sm:inline text-xs font-mono text-zinc-400 sm:text-sm whitespace-nowrap tabular-nums" aria-label="Clock" @click="onHeaderContext">
           {{ formatted }}
         </span>
@@ -51,27 +25,30 @@
         <span v-if="!isUtc" class="text-[10px] text-zinc-500">{{ tzLabel }}</span>
       </div>
 
-      <SyncStatus v-if="isManager" />
+      <!-- Right: User actions -->
+      <div class="flex items-center gap-3">
+        <SyncStatus v-if="isManager" />
 
-      <div v-if="isManager && manager" class="flex items-center gap-2">
-        <img
-          v-if="manager.avatar"
-          :src="manager.avatar"
-          alt=""
-          class="h-7 w-7 rounded-full border border-[var(--eg-border)] object-cover"
-        />
-        <span
-          class="hidden max-w-[190px] truncate text-xs text-zinc-400 md:inline"
-          :title="manager.email"
-        >
-          {{ manager.email }}
-        </span>
-        <button class="eg-btn-ghost !px-3 !py-1.5 text-xs whitespace-nowrap" @click="onSignOut">Sign out</button>
+        <div v-if="isManager && manager" class="flex items-center gap-2">
+          <img
+            v-if="manager.avatar"
+            :src="manager.avatar"
+            alt=""
+            class="h-7 w-7 rounded-full border border-[var(--eg-border)] object-cover"
+          />
+          <span
+            class="hidden max-w-[190px] truncate text-xs text-zinc-400 md:inline"
+            :title="manager.email"
+          >
+            {{ manager.email }}
+          </span>
+          <button class="eg-btn-ghost !px-3 !py-1.5 text-xs whitespace-nowrap" @click="onSignOut">Sign out</button>
+        </div>
+
+        <NuxtLink v-else-if="phase === 'anonymous' || phase === 'denied'" to="/login" class="eg-btn-primary !py-1.5 text-xs">
+          Sign in
+        </NuxtLink>
       </div>
-
-      <NuxtLink v-else-if="phase === 'anonymous' || phase === 'denied'" to="/login" class="eg-btn-primary !py-1.5 text-xs">
-        Sign in
-      </NuxtLink>
     </div>
   </header>
 </template>
