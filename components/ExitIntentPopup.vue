@@ -19,7 +19,7 @@
         class="eip-overlay fixed inset-0 z-[9999] flex items-center justify-center p-4"
         role="dialog"
         aria-modal="true"
-        aria-label="Before you go"
+        aria-label="Exit intent popup"
         @click.self="dismiss"
         @keydown.esc="dismiss"
       >
@@ -40,83 +40,6 @@
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-
-          <!-- header -->
-          <div class="eip-header mb-4 flex items-center gap-3">
-            <div class="eip-icon w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8Z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="eip-title text-white font-bold text-lg tracking-tight">Before you go</h3>
-              <p class="eip-sub text-zinc-400 text-sm">
-                Stay connected with @earthguardians
-              </p>
-            </div>
-          </div>
-
-          <!-- social handles row -->
-          <div class="eip-handles mb-5 grid grid-cols-2 gap-3">
-            <a
-              href="https://instagram.com/earthguardians"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="eip-handle flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--eg-border)] bg-[var(--bg-tertiary)] hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group"
-            >
-              <div class="eip-handle-icon w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 transition-colors">
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                  <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37Z" />
-                  <line x1="17.5" y1="17.5" x2="17.51" y2="17.5" />
-                </svg>
-              </div>
-              <div class="eip-handle-text flex flex-col min-w-0">
-                <span class="eip-handle-user text-sm font-semibold text-white">@earthguardians</span>
-                <span class="eip-handle-label text-xs text-zinc-400">Instagram</span>
-              </div>
-              <svg class="eip-handle-arrow w-4 h-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="9" y1="18" x2="15" y2="12" />
-                <line x1="15" y1="12" x2="9" y2="6" />
-              </svg>
-            </a>
-
-            <button
-              class="eip-handle flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--eg-border)] bg-[var(--bg-tertiary)] hover:border-zinc-600 hover:bg-zinc-800/50 transition-all group"
-              @click="shareCalendar"
-            >
-              <div class="eip-handle-icon w-8 h-8 rounded-lg bg-zinc-800/50 flex items-center justify-center text-zinc-300 group-hover:bg-zinc-600 transition-colors">
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 3.69a8.96 8.96 0 00-4.31 1.23l-2.36 2.17a2.26 2.26 0 01-3.42 0l-2.36-2.17a8.96 8.96 0 00-4.31-1.23C4.84 3.69 2 6.55 2 9.88c0 4.17 3.48 7.65 8 7.95v-5.19a2.27 2.27 0 011.13-2 2.27 2.27 0 012.22 0v2.14h5.32a2.27 2.27 0 012.22-2v-5.48C18.52 6.55 22 3.69 22 9.88c0 3.33-2.84 6.19-6 6.19" />
-                  <path d="M16 11a3 3 0 11-6 0 3 3 0 016 0Z" />
-                </svg>
-              </div>
-              <div class="eip-handle-text flex flex-col min-w-0">
-                <span class="eip-handle-user text-sm font-semibold text-white">Share calendar</span>
-                <span class="eip-handle-label text-xs text-zinc-400">With your team</span>
-              </div>
-              <svg class="eip-handle-arrow w-4 h-4 text-zinc-500 group-hover:text-emerald-400 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="9" y1="18" x2="15" y2="12" />
-                <line x1="15" y1="12" x2="9" y2="6" />
-              </svg>
-            </button>
-          </div>
-
-          <!-- newsletter -->
-          <div class="eip-newsletter p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-            <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2Z" />
-                <polyline points="22,6 12,13 2,6" />
-              </svg>
-              <div>
-                <p class="eip-news-title text-sm font-semibold text-white">Join the newsletter</p>
-                <p class="eip-news-desc text-xs text-emerald-200/80 mt-0.5">
-                  Monthly updates on climate action, grants, and Earth Guardians campaigns.
-                </p>
-              </div>
-            </div>
-          </div>
 
           <!-- footer -->
           <div class="eip-footer mt-5 pt-4 border-t border-[var(--eg-border)] flex items-center justify-between">
