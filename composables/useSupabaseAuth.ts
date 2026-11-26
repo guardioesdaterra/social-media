@@ -161,12 +161,13 @@ export function useSupabaseAuth() {
       // `access_type: 'offline'` + `prompt: 'consent'` are required to
       // receive a refresh_token so we can re-authorise after the 1-hour
       // provider_token expiry.
+      // Also request drive.readonly for Google Drive file picker integration.
       const redirectTo = options.redirectTo ?? callbackUrl()
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
-          scopes: 'openid email profile https://www.googleapis.com/auth/gmail.send',
+          scopes: 'openid email profile https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.readonly',
           queryParams: {
             prompt: 'consent',
             access_type: 'offline',
