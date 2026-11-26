@@ -88,21 +88,27 @@
                 <h3 class="eg-section-title">Media</h3>
                 <p class="eg-section-sub">Full quality image or video, stored in Postgres.</p>
                 <div class="mt-4 space-y-3">
-                  <div class="flex gap-1" role="tablist" aria-label="Media source">
-                    <button type="button" role="tab" :aria-selected="mediaSource === 'local'" :class="['eg-tab-btn', mediaSource === 'local' ? 'active' : '']" @click="mediaSource = 'local'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>PC: PHOTO | VIDEO</button>
-                    <button type="button" role="tab" :aria-selected="mediaSource === 'gdrive'" :class="['eg-tab-btn', mediaSource === 'gdrive' ? 'active' : '']" @click="openGoogleDrivePicker"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="mr-1.5"><path d="M19.5 9c0-2.48-2.02-4.5-4.5-4.5S10.5 6.52 10.5 9"/><path d="M12 16.5c-2.48 0-4.5-2.02-4.5-4.5S9.5 7.5 12 7.5s4.5 2.02 4.5 4.5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M21 15h-2.5a1.5 1.5 0 0 1-1.5-1.5V12a1.5 1.5 0 0 0-1.5-1.5H12"/></svg>Google Drive</button>
+                  <div class="eg-segmented mt-2" role="tablist" aria-label="Media source">
+                    <button type="button" role="tab" :aria-selected="mediaSource === 'local'" :class="['eg-segmented-item', mediaSource === 'local' ? 'is-active' : '']" @click="mediaSource = 'local'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Local Upload</button>
+                    <button type="button" role="tab" :aria-selected="mediaSource === 'gdrive'" :class="['eg-segmented-item', mediaSource === 'gdrive' ? 'is-active' : '']" @click="openGoogleDrivePicker"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="mr-1.5"><path d="M19.5 9c0-2.48-2.02-4.5-4.5-4.5S10.5 6.52 10.5 9"/><path d="M12 16.5c-2.48 0-4.5-2.02-4.5-4.5S9.5 7.5 12 7.5s4.5 2.02 4.5 4.5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M21 15h-2.5a1.5 1.5 0 0 1-1.5-1.5V12a1.5 1.5 0 0 0-1.5-1.5H12"/></svg>Google Drive</button>
                   </div>
 
-                  <div v-if="mediaSource === 'local'" class="mt-2 space-y-3 animate-fade-in">
+                  <div v-if="mediaSource === 'local'" class="mt-2 space-y-3">
                     <label class="eg-dropzone"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="1.6" /><path d="m21 15-4.2-4.2a2 2 0 0 0-2.8 0L4 21" /></svg><span class="text-sm font-medium text-zinc-300">Click to choose an image or video</span><span class="text-[11px] text-zinc-500">PNG, JPG or WebP (max 4 MB) · MP4 or MOV (max 100 MB) · replaces any existing media</span><input type="file" accept="image/*,video/*" class="sr-only" @change="onMedia" /></label>
                   </div>
 
-                  <div v-else class="mt-2 animate-fade-in">
-                    <div class="eg-callout eg-callout-info"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><p class="text-sm font-medium text-white">Select from Google Drive</p><p class="text-xs text-zinc-400 mt-0.5">Browse folders to pick a single file, multiple files, or an entire folder (all images/videos for carousel).</p></div></div>
+                  <div v-else class="mt-2">
+                    <div class="rounded-xl p-4 mb-3 bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-emerald-400 flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-white">Select from Google Drive</p>
+                        <p class="text-xs text-zinc-400 mt-0.5">Browse folders to pick a single file, multiple files, or an entire folder (all images/videos for carousel).</p>
+                      </div>
+                    </div>
                     <button type="button" class="eg-btn-apple-secondary w-full" @click="openGoogleDrivePicker"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2"><path d="M21 15V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v10"/><path d="M3 15v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V15"/></svg>Open Google Drive Picker</button>
                   </div>
 
-                  <div v-if="mediaPreview" class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 animate-slide-up">
+                  <div v-if="mediaPreview" class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <template v-if="mediaKind === 'video'"><video :src="mediaPreview" alt="" class="h-16 w-24 shrink-0 rounded-lg object-cover ring-1 ring-white/10" muted playsinline /></template>
                     <template v-else><img :src="mediaPreview" alt="" class="h-16 w-24 shrink-0 rounded-lg object-cover ring-1 ring-white/10" /></template>
                     <div class="min-w-0 flex-1"><p class="truncate text-xs font-medium text-zinc-200">Current {{ mediaKind }}</p><p class="mt-0.5 text-[11px] text-zinc-500">{{ formatBytes(mediaBytes) }}</p></div>
@@ -142,7 +148,7 @@
     </div>
   </Transition>
 
-  <GoogleDrivePicker v-if="gdrivePickerOpen" :open="gdrivePickerOpen" @select="onGoogleDriveSelect" @cancel="gdrivePickerOpen = false" @update:open="gdrivePickerOpen = $event" :selection-mode="gdriveSelectionMode" />
+  <GoogleDrivePicker v-if="gdrivePickerOpen" :open="gdrivePickerOpen" @select="onGoogleDriveSelect" @cancel="gdrivePickerOpen = false" @update:open="gdrivePickerOpen = $event" @update:selectionMode="gdriveSelectionMode = $event" :selection-mode="gdriveSelectionMode" />
 </template>
 
 <script setup lang="ts">
@@ -188,7 +194,7 @@ async function downloadMedia() { if (!mediaPreview.value) return; const mime = m
 
 function openGoogleDrivePicker() { gdriveSelectionMode.value = form.format === 'Carousel' ? 'folder' : 'multiple'; gdrivePickerOpen.value = true }
 
-function onGoogleDriveSelect(mediaFiles: Array<{ id: string; name: string; mimeType: string; size: number; dataUrl: string; kind: 'image' | 'video' }>) { if (mediaFiles.length === 0) return; const firstFile = mediaFiles[0]; if (!firstFile) return; const isVideo = firstFile.kind === 'video'; if (isVideo) { form.image_base64 = null; form.video_base64 = firstFile.dataUrl } else { form.video_base64 = null; form.image_base64 = firstFile.dataUrl } mediaPreview.value = firstFile.dataUrl; mediaKind.value = firstFile.kind; mediaBytes.value = firstFile.size; if (form.format === 'Carousel' && mediaFiles.length > 1) console.log(`Carousel: ${mediaFiles.length} files selected. Using first. Multi-image carousel not yet supported.`); gdrivePickerOpen.value = false; mediaSource.value = 'gdrive' }
+function onGoogleDriveSelect(mediaFiles: Array<{ id: string; name: string; mimeType: string; size: number; dataUrl: string; kind: 'image' | 'video' }>) { if (mediaFiles.length === 0) return; const firstFile = mediaFiles[0]; if (!firstFile) return; const isVideo = firstFile.kind === 'video'; if (isVideo) { form.image_base64 = null; form.video_base64 = firstFile.dataUrl } else { form.video_base64 = null; form.image_base64 = firstFile.dataUrl } mediaPreview.value = firstFile.dataUrl; mediaKind.value = firstFile.kind; mediaBytes.value = firstFile.size; if (form.format === 'Carousel' && mediaFiles.length > 1) { console.warn(`Carousel: ${mediaFiles.length} files selected from Google Drive. Current schema supports only 1 media file per post. Using first file: ${firstFile.name}`); alert(`Carousel mode: ${mediaFiles.length} files selected, but only the first (${firstFile.name}) will be used. Multi-image carousel support requires schema changes.`) } gdrivePickerOpen.value = false; mediaSource.value = 'gdrive' }
 
 async function handleSubmit() { if (!form.topic_key) { alert('Please select a topic — every post must be linked to one.'); return } const draft: any = { id: form.id || undefined, day: form.day, scheduled_at: form.scheduled_at || null, topic_key: form.topic_key, format: form.format, status: form.status, title: form.title, caption: form.caption, hashtags: form.hashtags }; if (form.image_base64) { draft.image_base64 = form.image_base64; draft.image_name = 'upload'; draft.image_bytes = mediaKind.value === 'image' ? mediaBytes.value : null } else if (props.post) draft.image_base64 = null; if (form.video_base64) { draft.video_base64 = form.video_base64; draft.video_name = 'upload'; draft.video_bytes = mediaKind.value === 'video' ? mediaBytes.value : null } else if (props.post) draft.video_base64 = null; saving.value = true; emit('save', draft) }
 

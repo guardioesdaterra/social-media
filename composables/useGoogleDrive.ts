@@ -9,19 +9,7 @@ import { ref, computed } from 'vue'
 
 const GOOGLE_DRIVE_API = 'https://www.googleapis.com/drive/v3'
 
-interface DriveFile {
-  id: string
-  name: string
-  mimeType: string
-  size?: string
-  parents?: string[]
-  modifiedTime: string
-  thumbnailLink?: string
-  webViewLink?: string
-  iconLink?: string
-}
-
-export interface DriveFilePublic {
+export interface DriveFile {
   id: string
   name: string
   mimeType: string
@@ -34,12 +22,12 @@ export interface DriveFilePublic {
 }
 
 interface DriveListResponse {
-  files: DriveFilePublic[]
+  files: DriveFile[]
   nextPageToken?: string
   incompleteSearch?: boolean
 }
 
-interface MediaFile {
+export interface MediaFile {
   id: string
   name: string
   mimeType: string
@@ -47,6 +35,28 @@ interface MediaFile {
   dataUrl: string
   kind: 'image' | 'video'
   thumbnailUrl?: string
+}
+
+const WORKSPACE_MIME_TYPES = new Set([
+  'application/vnd.google-apps.document',
+  'application/vnd.google-apps.spreadsheet',
+  'application/vnd.google-apps.presentation',
+  'application/vnd.google-apps.drawing',
+  'application/vnd.google-apps.form',
+  'application/vnd.google-apps.script',
+  'application/vnd.google-apps.site',
+  'application/vnd.google-apps.folder',
+  'application/vnd.google-apps.map',
+  'application/vnd.google-apps.fusiontable',
+  'application/vnd.google-apps.photo',
+])
+
+function isDownloadableMedia(mimeType: string): boolean {
+  return mimeType.startsWith('image/') || mimeType.startsWith('video/') || mimeType.startsWith('audio/')
+}
+
+function isWorkspaceFile(mimeType: string): boolean {
+  return WORKSPACE_MIME_TYPES.has(mimeType)
 }
 
 export function useGoogleDrive() {
@@ -79,6 +89,10 @@ export function useGoogleDrive() {
       },
     })
 
+    if (res.status === 401) {
+      throw new Error('Google access token expired. Please sign in again.')
+    }
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.error?.message || `Google Drive API error: ${res.status}`)
@@ -99,11 +113,11 @@ export function useGoogleDrive() {
     return apiFetch<DriveListResponse>(`/files?${params.toString()}`)
   }
 
-  async function getFile(fileId: string): Promise<DriveFilePublic> {
+  async function getFile(fileId: string): Promise<DriveFile> {
     const params = new URLSearchParams({
       fields: 'id,name,mimeType,size,parents,modifiedTime,thumbnailLink,webViewLink,iconLink',
     })
-    return apiFetch<DriveFilePublic>(`/files/${fileId}?${params.toString()}`)
+    return apiFetch<DriveFile>(`/files/${fileId}?${params.toString()}`)
   }
 
   async function downloadFile(fileId: string, mimeType: string): Promise<string> {
@@ -113,6 +127,10 @@ export function useGoogleDrive() {
     const res = await fetch(`${GOOGLE_DRIVE_API}/files/${fileId}?alt=media`, {
       headers: { 'Authorization': `Bearer ${token}` },
     })
+
+    if (res.status === 401) {
+      throw new Error('Google access token expired. Please sign in again.')
+    }
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
@@ -124,10 +142,14 @@ export function useGoogleDrive() {
     return `data:${mimeType};base64,${base64}`
   }
 
-  async function fetchFolderMedia(folderId: string, onProgress?: (current: number, total: number) => void): Promise<MediaFile[]> {
+  async function fetchFolderMedia(
+    folderId: string,
+    onProgress?: (current: number, total: number | null) => void,
+  ): Promise<MediaFile[]> {
     loading.value = true
     error.value = null
     const results: MediaFile[] = []
+    let totalFiles = 0
 
     async function processFolder(currentFolderId: string): Promise<void> {
       let pageToken: string | undefined
@@ -137,12 +159,14 @@ export function useGoogleDrive() {
 
         for (const file of response.files) {
           const isFolder = file.mimeType === 'application/vnd.google-apps.folder'
-          const isImage = file.mimeType.startsWith('image/')
-          const isVideo = file.mimeType.startsWith('video/')
+          const isDownloadable = isDownloadableMedia(file.mimeType)
+          const isWorkspace = isWorkspaceFile(file.mimeType)
 
           if (isFolder) {
             await processFolder(file.id)
-          } else if (isImage || isVideo) {
+          } else if (isDownloadable) {
+            totalFiles++
+            onProgress?.(results.length + 1, totalFiles || null)
             try {
               const dataUrl = await downloadFile(file.id, file.mimeType)
               results.push({
@@ -151,13 +175,15 @@ export function useGoogleDrive() {
                 mimeType: file.mimeType,
                 size: parseInt(file.size || '0', 10),
                 dataUrl,
-                kind: isVideo ? 'video' : 'image',
+                kind: file.mimeType.startsWith('video/') ? 'video' : 'image',
                 thumbnailUrl: file.thumbnailLink,
               })
-              onProgress?.(results.length, results.length)
+              onProgress?.(results.length, totalFiles)
             } catch (err) {
               console.warn(`Failed to download ${file.name}:`, err)
             }
+          } else if (isWorkspace) {
+            console.debug(`Skipping Google Workspace file: ${file.name} (${file.mimeType})`)
           }
         }
       } while (pageToken)
@@ -182,9 +208,11 @@ export function useGoogleDrive() {
     try {
       for (const fileId of fileIds) {
         const file = await getFile(fileId)
-        const isImage = file.mimeType.startsWith('image/')
-        const isVideo = file.mimeType.startsWith('video/')
-        if (!isImage && !isVideo) continue
+        const isDownloadable = isDownloadableMedia(file.mimeType)
+        if (!isDownloadable) {
+          console.debug(`Skipping non-media file: ${file.name} (${file.mimeType})`)
+          continue
+        }
 
         const dataUrl = await downloadFile(fileId, file.mimeType)
         results.push({
@@ -193,7 +221,7 @@ export function useGoogleDrive() {
           mimeType: file.mimeType,
           size: parseInt(file.size || '0', 10),
           dataUrl,
-          kind: isVideo ? 'video' : 'image',
+          kind: file.mimeType.startsWith('video/') ? 'video' : 'image',
           thumbnailUrl: file.thumbnailLink,
         })
       }
@@ -206,9 +234,10 @@ export function useGoogleDrive() {
     }
   }
 
-  async function searchFiles(query: string): Promise<DriveFilePublic[]> {
+  async function searchFiles(query: string): Promise<DriveFile[]> {
+    const escapedQuery = query.replace(/'/g, "\\'")
     const params = new URLSearchParams({
-      q: `name contains '${query.replace(/'/g, "\\'")}' and trashed = false`,
+      q: `name contains '${escapedQuery}' and trashed = false`,
       fields: 'files(id,name,mimeType,size,parents,modifiedTime,thumbnailLink,webViewLink,iconLink)',
       pageSize: '50',
     })
@@ -229,5 +258,7 @@ export function useGoogleDrive() {
     downloadFiles,
     searchFiles,
     getAccessToken,
+    isDownloadableMedia,
+    isWorkspaceFile,
   }
 }

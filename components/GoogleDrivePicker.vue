@@ -1,6 +1,6 @@
 <template>
   <Transition name="modal">
-    <div v-if="open" class="fixed inset-0 z-50" @click.self="close">
+    <div v-if="open" class="fixed inset-0 z-50" @click.self="close" @keydown.escape="close" ref="modalRoot" tabindex="-1">
       <div class="absolute inset-0 bg-black/55 backdrop-blur-2xl" aria-hidden="true" />
       
       <div class="eg-sheet absolute inset-0 flex flex-col overflow-hidden sm:inset-4 lg:inset-8 max-h-[90vh]">
@@ -19,8 +19,8 @@
           </div>
           <div class="mt-3 relative">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="search" v-model="searchQuery" @input.debounce.300="handleSearch" @keydown.enter="handleSearch" placeholder="Search files and folders..." class="eg-field pl-10" />
-            <button v-if="searchQuery" type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white" @click="clearSearch"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <input type="search" v-model="searchQuery" @input.debounce.300="handleSearch" @keydown.enter="handleSearch" @keydown.escape="clearSearch" placeholder="Search files and folders..." class="eg-field pl-10" ref="searchInput" />
+            <button v-if="searchQuery" type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white" @click="clearSearch" aria-label="Clear search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
         </header>
 
@@ -41,7 +41,7 @@
               <template v-if="selectionMode === 'multiple' || selectionMode === 'folder'"><span class="text-xs text-emerald-400">({{ selectedFiles.size }} selected)</span></template>
             </div>
             <div class="flex items-center gap-2">
-              <select v-model="selectionMode" class="eg-select text-xs" style="min-width: 140px">
+              <select v-model="selectionMode" class="eg-select text-xs" style="min-width: 140px" @change="onSelectionModeChange">
                 <option value="single">Single file</option>
                 <option value="multiple">Multiple files</option>
                 <option value="folder">Folder (carousel)</option>
@@ -55,7 +55,7 @@
             <div v-else-if="files.length === 0" class="flex items-center justify-center h-full text-zinc-500"><div class="text-center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" class="mx-auto mb-2"><path d="M21 15V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v10"/><path d="M3 15v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V15"/></svg><p class="text-sm">No files or folders found</p><p class="text-xs mt-1">Try a different folder or search term</p></div></div>
             <template v-else>
               <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3" v-if="viewMode === 'grid'">
-                <div v-for="file in files" :key="file.id" class="group relative" :class="{ 'ring-2 ring-emerald-400': isSelected(file.id), 'opacity-50': file.mimeType === 'application/vnd.google-apps.folder' && selectionMode !== 'folder' }" @click="toggleSelection(file)" @dblclick="handleDoubleClick(file)">
+                <div v-for="file in files" :key="file.id" class="group relative" :class="{ 'ring-2 ring-emerald-400': isSelected(file.id), 'opacity-50': file.mimeType === 'application/vnd.google-apps.folder' && selectionMode !== 'folder' }" @click="toggleSelection(file)" @dblclick="handleDoubleClick(file)" @keydown.enter="handleKeydownEnter(file)" @keydown.space.prevent="handleKeydownSpace(file)" tabindex="0" role="option" :aria-selected="isSelected(file.id)">
                   <div class="aspect-square rounded-lg bg-zinc-800 overflow-hidden relative">
                     <template v-if="file.mimeType === 'application/vnd.google-apps.folder'"><div class="flex h-full w-full items-center justify-center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-amber-400"><path d="M21 15V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v10"/><path d="M3 15v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V15"/></svg></div><div class="absolute bottom-1 left-1 right-1 flex items-center justify-center"><span class="text-[10px] bg-black/70 text-amber-300 px-1.5 py-0.5 rounded">Folder</span></div></template>
                     <template v-else-if="file.mimeType.startsWith('image/')"><img :src="file.thumbnailLink || file.iconLink" :alt="file.name" class="h-full w-full object-cover" loading="lazy" /></template>
@@ -69,7 +69,7 @@
                 </div>
               </div>
               <div v-else class="divide-y divide-white/05">
-                <div v-for="file in files" :key="file.id" class="flex items-center gap-3 px-2 py-2 hover:bg-white/03 transition rounded-lg" :class="{ 'bg-emerald-400/10': isSelected(file.id) }" @click="toggleSelection(file)" @dblclick="handleDoubleClick(file)">
+                <div v-for="file in files" :key="file.id" class="flex items-center gap-3 px-2 py-2 hover:bg-white/03 transition rounded-lg" :class="{ 'bg-emerald-400/10': isSelected(file.id) }" @click="toggleSelection(file)" @dblclick="handleDoubleClick(file)" @keydown.enter="handleKeydownEnter(file)" @keydown.space.prevent="handleKeydownSpace(file)" tabindex="0" role="option" :aria-selected="isSelected(file.id)">
                   <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center relative overflow-hidden">
                     <template v-if="file.mimeType === 'application/vnd.google-apps.folder'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-amber-400"><path d="M21 15V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v10"/><path d="M3 15v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V15"/></svg></template>
                     <template v-else-if="file.mimeType.startsWith('image/')"><img :src="file.thumbnailLink || file.iconLink" :alt="file.name" class="h-full w-full object-cover" /></template>
@@ -86,7 +86,10 @@
 
         <footer class="eg-sheet-footer flex-shrink-0">
           <div class="w-full flex items-center justify-between">
-            <div class="flex items-center gap-3"><button type="button" class="eg-btn-apple-secondary text-xs" @click="toggleViewMode"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-1"><template v-if="viewMode === 'grid'"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></template><template v-else><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></template></svg>{{ viewMode === 'grid' ? 'List' : 'Grid' }}</button></div>
+            <div class="flex items-center gap-3">
+              <button type="button" class="eg-btn-apple-secondary text-xs" @click="toggleViewMode"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-1"><template v-if="viewMode === 'grid'"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></template><template v-else><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></template></svg>{{ viewMode === 'grid' ? 'List' : 'Grid' }}</button>
+              <button v-if="selectionMode === 'multiple'" type="button" class="eg-btn-apple-secondary text-xs" @click="toggleSelectAll">{{ selectAll ? 'Deselect All' : 'Select All' }} ({{ selectableFiles.length }})</button>
+            </div>
             <div class="flex items-center gap-2">
               <button type="button" class="eg-btn-apple-secondary" @click="close">Cancel</button>
               <button v-if="selectionMode === 'folder' && currentFolderId !== 'root'" type="button" class="eg-btn-apple-primary" :disabled="isLoading" @click="selectCurrentFolder"><span v-if="isLoading" class="flex items-center gap-2"><span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/30 border-t-black" />Loading...</span><span v-else>Select Folder ({{ mediaFilesCount }} media files)</span></button>
@@ -101,19 +104,19 @@
 </template>
 
 <script setup lang="ts">
-import type { DriveFilePublic } from '~/composables/useGoogleDrive'
+import type { DriveFile } from '~/composables/useGoogleDrive'
 import { useGoogleDrive } from '~/composables/useGoogleDrive'
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 
 interface Props { open: boolean; selectionMode?: 'single' | 'multiple' | 'folder' }
-interface Emits { select: [files: Array<{ id: string; name: string; mimeType: string; size: number; dataUrl: string; kind: 'image' | 'video' }>]; cancel: []; 'update:open': [open: boolean] }
+interface Emits { select: [files: Array<{ id: string; name: string; mimeType: string; size: number; dataUrl: string; kind: 'image' | 'video' }>]; cancel: []; 'update:open': [open: boolean]; 'update:selectionMode': [mode: 'single' | 'multiple' | 'folder'] }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const { loading, error, listFiles, fetchFolderMedia, downloadFiles, searchFiles, getFile } = useGoogleDrive()
+const { loading, error, listFiles, fetchFolderMedia, downloadFiles, searchFiles, getFile, isDownloadableMedia } = useGoogleDrive()
 
-const files = ref<DriveFilePublic[]>([])
+const files = ref<DriveFile[]>([])
 const currentFolderId = ref('root')
 const currentFolderName = ref('My Drive')
 const breadcrumbs = ref<Array<{ id: string; name: string }>>([{ id: 'root', name: 'My Drive' }])
@@ -123,12 +126,16 @@ const viewMode = ref<'grid' | 'list'>('grid')
 const selectedFiles = ref<Set<string>>(new Set())
 const selectionMode = ref(props.selectionMode || 'single')
 const loadMessage = ref('Loading...')
+const modalRoot = ref<HTMLElement | null>(null)
+const searchInput = ref<HTMLInputElement | null>(null)
 
 const isLoading = computed(() => loading.value)
-const mediaFilesCount = computed(() => files.value.filter((f: DriveFilePublic) => f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/')).length)
+const mediaFilesCount = computed(() => files.value.filter(f => isDownloadableMedia(f.mimeType)).length)
+const selectableFiles = computed(() => files.value.filter(f => isDownloadableMedia(f.mimeType)))
+const selectAll = computed(() => selectableFiles.value.length > 0 && selectableFiles.value.every(f => selectedFiles.value.has(f.id)))
 
 function close() { emit('update:open', false); emit('cancel') }
-function formatFileInfo(file: DriveFilePublic): string { const size = file.size ? parseInt(file.size, 10) : 0; if (size === 0) return file.mimeType; const kb = size / 1024; if (kb < 1024) return `${kb.toFixed(1)} KB`; return `${(kb / 1024).toFixed(1)} MB` }
+function formatFileInfo(file: DriveFile): string { const size = file.size ? parseInt(file.size, 10) : 0; if (size === 0) return file.mimeType; const kb = size / 1024; if (kb < 1024) return `${kb.toFixed(1)} KB`; return `${(kb / 1024).toFixed(1)} MB` }
 function formatDate(iso: string): string { const date = new Date(iso); const now = new Date(); const diff = now.getTime() - date.getTime(); const days = Math.floor(diff / (1000 * 60 * 60 * 24)); if (days === 0) return 'Today'; if (days === 1) return 'Yesterday'; if (days < 7) return `${days}d ago`; return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
 function isSelected(fileId: string): boolean { return selectedFiles.value.has(fileId) }
 
@@ -149,14 +156,34 @@ async function loadFolder(folderId: string, folderName?: string) {
   } catch (err) { console.error('Failed to load folder:', err) }
 }
 
-function updateBreadcrumbs(folder: DriveFilePublic) { const path: Array<{ id: string; name: string }> = [{ id: 'root', name: 'My Drive' }]; if (folder.parents) path.push({ id: folder.id, name: folder.name }); breadcrumbs.value = path }
+function updateBreadcrumbs(folder: DriveFile) {
+  const path: Array<{ id: string; name: string }> = [{ id: 'root', name: 'My Drive' }]
+  if (folder.parents && folder.parents.length > 0) {
+    // For simplicity, we just add the current folder
+    // A full implementation would traverse parents recursively
+    path.push({ id: folder.id, name: folder.name })
+  }
+  breadcrumbs.value = path
+}
 
-async function handleSearch() { const q = searchQuery.value.trim(); if (!q) { isSearching.value = false; await loadFolder(currentFolderId.value); return } isSearching.value = true; loadMessage.value = 'Searching...'; selectedFiles.value.clear(); try { const results = await searchFiles(q); files.value = results; currentFolderName.value = `Search: "${q}"`; breadcrumbs.value = [{ id: 'root', name: 'My Drive' }, { id: 'search', name: `Search: "${q}"` }] } catch (err) { console.error('Search failed:', err) } finally { isSearching.value = false } }
+async function handleSearch() {
+  const q = searchQuery.value.trim()
+  if (!q) { isSearching.value = false; await loadFolder(currentFolderId.value); return }
+  isSearching.value = true
+  loadMessage.value = 'Searching...'
+  selectedFiles.value.clear()
+  try {
+    const results = await searchFiles(q)
+    files.value = results
+    currentFolderName.value = `Search: "${q}"`
+    breadcrumbs.value = [{ id: 'root', name: 'My Drive' }, { id: 'search', name: `Search: "${q}"` }]
+  } catch (err) { console.error('Search failed:', err) } finally { isSearching.value = false }
+}
 function clearSearch() { searchQuery.value = ''; handleSearch() }
 function navigateToFolder(folderId: string, folderName: string) { searchQuery.value = ''; loadFolder(folderId, folderName) }
 function goUp() { if (currentFolderId.value === 'root') return; searchQuery.value = ''; const parent = breadcrumbs.value[breadcrumbs.value.length - 2]; if (parent) loadFolder(parent.id, parent.name); else loadFolder('root') }
 
-function toggleSelection(file: DriveFilePublic) {
+function toggleSelection(file: DriveFile) {
   const isFolder = file.mimeType === 'application/vnd.google-apps.folder'
   if (selectionMode.value === 'single') {
     selectedFiles.value.clear()
@@ -170,9 +197,29 @@ function toggleSelection(file: DriveFilePublic) {
   }
 }
 
-function handleDoubleClick(file: DriveFilePublic) {
+function handleDoubleClick(file: DriveFile) {
   if (file.mimeType === 'application/vnd.google-apps.folder') navigateToFolder(file.id, file.name)
   else if (selectionMode.value === 'single') confirmSelection()
+}
+
+function handleKeydownEnter(file: DriveFile) {
+  if (file.mimeType === 'application/vnd.google-apps.folder') navigateToFolder(file.id, file.name)
+  else if (selectionMode.value === 'single') confirmSelection()
+  else toggleSelection(file)
+}
+
+function handleKeydownSpace(file: DriveFile) {
+  if (file.mimeType !== 'application/vnd.google-apps.folder' && (selectionMode.value === 'multiple' || selectionMode.value === 'single')) {
+    toggleSelection(file)
+  }
+}
+
+function toggleSelectAll() {
+  if (selectAll.value) {
+    for (const f of selectableFiles.value) selectedFiles.value.delete(f.id)
+  } else {
+    for (const f of selectableFiles.value) selectedFiles.value.add(f.id)
+  }
 }
 
 async function confirmSelection() {
@@ -191,7 +238,7 @@ async function selectCurrentFolder() {
   loadMessage.value = 'Fetching all media from folder...'
   try {
     const mediaFiles = await fetchFolderMedia(currentFolderId.value, (current, total) => {
-      loadMessage.value = `Downloading ${current} / ${total} files...`
+      loadMessage.value = total ? `Downloading ${current} / ${total} files...` : `Downloading ${current} files...`
     })
     emit('select', mediaFiles)
     close()
@@ -200,7 +247,19 @@ async function selectCurrentFolder() {
 
 function toggleViewMode() { viewMode.value = viewMode.value === 'grid' ? 'list' : 'grid' }
 
-watch(() => props.open, (open) => { if (open) { selectedFiles.value.clear(); searchQuery.value = ''; loadFolder('root') } })
+function onSelectionModeChange() {
+  selectedFiles.value.clear()
+  emit('update:selectionMode', selectionMode.value)
+}
+
+watch(() => props.open, (open) => {
+  if (open) {
+    selectedFiles.value.clear()
+    searchQuery.value = ''
+    loadFolder('root')
+    nextTick(() => { modalRoot.value?.focus(); searchInput.value?.focus() })
+  }
+})
 watch(() => props.selectionMode, (mode) => { if (mode) selectionMode.value = mode; selectedFiles.value.clear() })
 onMounted(() => { if (props.open) loadFolder('root') })
 </script>
