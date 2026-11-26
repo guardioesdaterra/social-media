@@ -120,12 +120,13 @@ export function useGoogleDrive() {
     return apiFetch<DriveFile>(`/files/${fileId}?${params.toString()}`)
   }
 
-  async function downloadFile(fileId: string, mimeType: string): Promise<string> {
+  async function downloadFile(fileId: string, mimeType: string, signal?: AbortSignal): Promise<string> {
     const token = getAccessToken()
     if (!token) throw new Error('No Google access token available.')
 
     const res = await fetch(`${GOOGLE_DRIVE_API}/files/${fileId}?alt=media`, {
       headers: { 'Authorization': `Bearer ${token}` },
+      signal,
     })
 
     if (res.status === 401) {
@@ -145,6 +146,7 @@ export function useGoogleDrive() {
   async function fetchFolderMedia(
     folderId: string,
     onProgress?: (current: number, total: number | null) => void,
+    options?: { signal?: AbortSignal },
   ): Promise<MediaFile[]> {
     loading.value = true
     error.value = null
@@ -158,6 +160,7 @@ export function useGoogleDrive() {
         pageToken = response.nextPageToken
 
         for (const file of response.files) {
+          options?.signal?.throwIfAborted()
           const isFolder = file.mimeType === 'application/vnd.google-apps.folder'
           const isDownloadable = isDownloadableMedia(file.mimeType)
           const isWorkspace = isWorkspaceFile(file.mimeType)
@@ -168,7 +171,7 @@ export function useGoogleDrive() {
             totalFiles++
             onProgress?.(results.length + 1, totalFiles || null)
             try {
-              const dataUrl = await downloadFile(file.id, file.mimeType)
+              const dataUrl = await downloadFile(file.id, file.mimeType, options?.signal)
               results.push({
                 id: file.id,
                 name: file.name,
@@ -200,13 +203,14 @@ export function useGoogleDrive() {
     }
   }
 
-  async function downloadFiles(fileIds: string[]): Promise<MediaFile[]> {
+  async function downloadFiles(fileIds: string[], options?: { signal?: AbortSignal }): Promise<MediaFile[]> {
     loading.value = true
     error.value = null
     const results: MediaFile[] = []
 
     try {
       for (const fileId of fileIds) {
+        options?.signal?.throwIfAborted()
         const file = await getFile(fileId)
         const isDownloadable = isDownloadableMedia(file.mimeType)
         if (!isDownloadable) {
@@ -214,7 +218,7 @@ export function useGoogleDrive() {
           continue
         }
 
-        const dataUrl = await downloadFile(fileId, file.mimeType)
+        const dataUrl = await downloadFile(fileId, file.mimeType, options?.signal)
         results.push({
           id: file.id,
           name: file.name,

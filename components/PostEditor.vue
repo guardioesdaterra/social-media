@@ -1,7 +1,7 @@
 <template>
   <Transition name="modal">
-    <div v-if="open" class="fixed inset-0 z-50" @click.self="close">
-      <div class="absolute inset-0 bg-black/55 backdrop-blur-2xl" aria-hidden="true" />
+    <div v-if="open" class="fixed inset-0 z-50">
+      <div class="absolute inset-0 bg-black/55 backdrop-blur-2xl" aria-hidden="true" @click="close" />
       
       <div class="eg-sheet absolute inset-0 flex flex-col overflow-hidden sm:inset-4 lg:inset-8">
         <header class="eg-sheet-header">
@@ -98,20 +98,27 @@
                   </div>
 
                   <div v-else class="mt-2">
-                    <div class="rounded-xl p-4 mb-3 bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-emerald-400 flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <div class="flex items-start gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-3.5">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="mt-0.5 flex-shrink-0 text-emerald-400"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                       <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-white">Select from Google Drive</p>
-                        <p class="text-xs text-zinc-400 mt-0.5">Browse folders to pick a single file, multiple files, or an entire folder (all images/videos for carousel).</p>
+                        <p class="text-sm font-medium text-white">Pick from Google Drive</p>
+                        <p class="mt-0.5 text-xs text-zinc-400">Choose one file, several files — or a whole folder (every image and video inside it) when the format is Carousel.</p>
                       </div>
                     </div>
-                    <button type="button" class="eg-btn-apple-secondary w-full" @click="openGoogleDrivePicker"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2"><path d="M21 15V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v10"/><path d="M3 15v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V15"/></svg>Open Google Drive Picker</button>
+                    <button type="button" class="eg-btn-apple-secondary mt-3 w-full" @click="openGoogleDrivePicker"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" aria-hidden="true"><path d="M21 15V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v10"/><path d="M3 15v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V15"/></svg>Open Google Drive</button>
+                    <p class="eg-hint">Files are downloaded from your Drive and stored with the post.</p>
                   </div>
 
                   <div v-if="mediaPreview" class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <template v-if="mediaKind === 'video'"><video :src="mediaPreview" alt="" class="h-16 w-24 shrink-0 rounded-lg object-cover ring-1 ring-white/10" muted playsinline /></template>
                     <template v-else><img :src="mediaPreview" alt="" class="h-16 w-24 shrink-0 rounded-lg object-cover ring-1 ring-white/10" /></template>
-                    <div class="min-w-0 flex-1"><p class="truncate text-xs font-medium text-zinc-200">Current {{ mediaKind }}</p><p class="mt-0.5 text-[11px] text-zinc-500">{{ formatBytes(mediaBytes) }}</p></div>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2">
+                        <p class="truncate text-xs font-medium text-zinc-200" :title="mediaName || undefined">{{ mediaName || `Current ${mediaKind}` }}</p>
+                        <span v-if="mediaOrigin" class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide" :class="mediaOrigin === 'gdrive' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-zinc-400'">{{ mediaOrigin === 'gdrive' ? 'Google Drive' : 'Upload' }}</span>
+                      </div>
+                      <p class="mt-0.5 text-[11px] text-zinc-500">{{ mediaKind === 'video' ? 'Video' : 'Image' }} · {{ formatBytes(mediaBytes) }}</p>
+                    </div>
                     <button type="button" class="eg-btn-apple-secondary rounded-lg px-3 py-1.5 text-xs" @click="downloadMedia">⤓ Download</button>
                     <button type="button" class="eg-icon-btn text-red-400" aria-label="Remove media" @click="clearMedia"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
                   </div>
@@ -120,9 +127,9 @@
             </div>
           </form>
 
-          <div class="hidden lg:flex w-1/2 min-w-[400px] max-w-[540px] border-l border-white/08 bg-[#0a0a0a] flex-col">
-            <div class="shrink-0 border-b border-white/08 px-6 py-4">
-              <div class="flex items-center justify-between"><h3 class="text-[13px] font-semibold text-white">Preview</h3><div class="flex items-center gap-2 rounded-lg bg-white/05 px-3 py-1.5"><span class="text-[11px] text-zinc-400">Format:</span><span class="text-xs font-medium text-white">{{ form.format }}</span></div></div>
+          <div class="hidden lg:flex w-1/2 min-w-[400px] max-w-[540px] border-l border-white/10 bg-[#0a0a0a] flex-col">
+            <div class="shrink-0 border-b border-white/10 px-6 py-4">
+              <div class="flex items-center justify-between"><h3 class="text-[13px] font-semibold text-white">Preview</h3><div class="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-1.5"><span class="text-[11px] text-zinc-400">Format:</span><span class="text-xs font-medium text-white">{{ form.format }}</span></div></div>
             </div>
             <div class="flex-1 overflow-y-auto p-6">
               <div class="mx-auto max-w-[350px] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl">
@@ -135,11 +142,11 @@
                 <div class="px-3 py-2"><p class="text-[13px] text-white"><span class="font-semibold">{{ selectedTopic?.label || 'earthguardians' }}</span><span class="ml-1">{{ previewCaption }}</span></p></div>
                 <div v-if="form.hashtags" class="px-3 pb-3"><p class="text-[13px] text-blue-400">{{ formattedHashtags }}</p></div>
                 <div class="px-3 pb-3"><button type="button" class="text-[13px] text-zinc-500 hover:text-zinc-300 transition">View all comments</button></div>
-                <div class="border-t border-white/08 px-3 py-2"><p class="text-[10px] uppercase tracking-wider text-zinc-500">{{ formatPreviewDate(form.day) }}</p></div>
+                <div class="border-t border-white/10 px-3 py-2"><p class="text-[10px] uppercase tracking-wider text-zinc-500">{{ formatPreviewDate(form.day) }}</p></div>
               </div>
               <div v-if="form.format === 'Story'" class="mt-6"><h4 class="mb-3 text-center text-xs font-medium text-zinc-500 uppercase tracking-wider">Story Preview</h4><div class="mx-auto aspect-[9/16] max-w-[250px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl"><template v-if="mediaPreview"><template v-if="mediaKind === 'video'"><video :src="mediaPreview" alt="Story media" class="h-full w-full object-cover" muted playsinline /></template><template v-else><img :src="mediaPreview" alt="Story media" class="h-full w-full object-cover" /></template><div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4"><p class="text-sm font-medium text-white truncate">{{ form.title || selectedTopic?.label }}</p></div></template><template v-else><div class="flex h-full flex-col items-center justify-center gap-2 text-zinc-600"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg><span class="text-xs">Story content</span></div></template></div></div>
             </div>
-            <div class="shrink-0 border-t border-white/08 bg-white/[0.02] px-6 py-3"><p class="text-[11px] text-zinc-500"><span class="text-zinc-400">Tip:</span> This is a preview. Actual appearance may vary by platform.</p></div>
+            <div class="shrink-0 border-t border-white/10 bg-white/[0.02] px-6 py-3"><p class="text-[11px] text-zinc-500"><span class="text-zinc-400">Tip:</span> This is a preview. Actual appearance may vary by platform.</p></div>
           </div>
         </div>
 
@@ -148,7 +155,7 @@
     </div>
   </Transition>
 
-  <GoogleDrivePicker v-if="gdrivePickerOpen" :open="gdrivePickerOpen" @select="onGoogleDriveSelect" @cancel="gdrivePickerOpen = false" @update:open="gdrivePickerOpen = $event" @update:selectionMode="gdriveSelectionMode = $event" :selection-mode="gdriveSelectionMode" />
+  <GoogleDrivePicker :open="gdrivePickerOpen" @select="onGoogleDriveSelect" @cancel="onGoogleDriveCancel" @update:open="gdrivePickerOpen = $event" @update:selectionMode="gdriveSelectionMode = $event" :selection-mode="gdriveSelectionMode" />
 </template>
 
 <script setup lang="ts">
@@ -157,6 +164,7 @@ import { FORMATS, STATUSES } from '~/lib/types'
 import { formatBytes, downloadDataUrl, fileToDataUrl, slugify } from '~/lib/image'
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from '~/lib/constants'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
+import { useToast } from '~/composables/useToast'
 import { computed, reactive, ref, watch } from 'vue'
 import GoogleDrivePicker from '~/components/GoogleDrivePicker.vue'
 
@@ -164,6 +172,7 @@ const props = defineProps<{ open: boolean; post: CalendarPost | null; topics: re
 const emit = defineEmits<{ save: [draft: any]; delete: [id: string]; cancel: []; 'update:open': [open: boolean] }>()
 
 const { phase } = useSupabaseAuth()
+const toast = useToast()
 const canEdit = computed(() => phase.value === 'manager')
 
 const selectedTopic = computed(() => props.topics.find(t => t.key === form.topic_key) || null)
@@ -177,6 +186,8 @@ const saving = ref(false)
 const mediaPreview = ref<string | null>(null)
 const mediaKind = ref<'image' | 'video' | null>(null)
 const mediaBytes = ref(0)
+const mediaName = ref('')
+const mediaOrigin = ref<'local' | 'gdrive' | null>(null)
 const mediaSource = ref<'local' | 'gdrive'>('local')
 const gdrivePickerOpen = ref(false)
 const gdriveSelectionMode = ref<'single' | 'multiple' | 'folder'>('single')
@@ -184,19 +195,52 @@ const gdriveSelectionMode = ref<'single' | 'multiple' | 'folder'>('single')
 function close() { emit('update:open', false) }
 watch(() => props.open, (open) => { if (open) resetForm() })
 
-function resetForm() { const post = props.post; const baseDay = post ? post.day : props.day; saving.value = false; form.id = post?.id ?? ''; form.day = post ? post.day : baseDay; form.scheduled_at = post?.scheduled_at ?? null; form.topic_key = post?.topic_key ?? ''; form.format = (post?.format ?? 'Carousel') as PostFormat; form.status = (post?.status ?? 'planned') as PostStatus; form.title = post?.title ?? ''; form.caption = post?.caption ?? ''; form.hashtags = post?.hashtags ?? ''; form.image_base64 = post?.image_base64 ?? null; form.video_base64 = post?.video_base64 ?? null; if (post?.video_base64) { mediaPreview.value = post.video_base64; mediaKind.value = 'video'; mediaBytes.value = post.video_bytes ?? 0 } else if (post?.image_base64) { mediaPreview.value = post.image_base64; mediaKind.value = 'image'; mediaBytes.value = post.image_bytes ?? 0 } else { mediaPreview.value = null; mediaKind.value = null; mediaBytes.value = 0 } mediaSource.value = 'local'; gdrivePickerOpen.value = false }
+function resetForm() { const post = props.post; const baseDay = post ? post.day : props.day; saving.value = false; form.id = post?.id ?? ''; form.day = post ? post.day : baseDay; form.scheduled_at = post?.scheduled_at ?? null; form.topic_key = post?.topic_key ?? ''; form.format = (post?.format ?? 'Carousel') as PostFormat; form.status = (post?.status ?? 'planned') as PostStatus; form.title = post?.title ?? ''; form.caption = post?.caption ?? ''; form.hashtags = post?.hashtags ?? ''; form.image_base64 = post?.image_base64 ?? null; form.video_base64 = post?.video_base64 ?? null; mediaName.value = ''; mediaOrigin.value = null; if (post?.video_base64) { mediaPreview.value = post.video_base64; mediaKind.value = 'video'; mediaBytes.value = post.video_bytes ?? 0 } else if (post?.image_base64) { mediaPreview.value = post.image_base64; mediaKind.value = 'image'; mediaBytes.value = post.image_bytes ?? 0 } else { mediaPreview.value = null; mediaKind.value = null; mediaBytes.value = 0 } mediaSource.value = 'local'; gdrivePickerOpen.value = false }
 
-async function onMedia(event: Event) { const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file) return; const isVideo = file.type.startsWith('video/'); const isImage = file.type.startsWith('image/'); if (!isVideo && !isImage) { alert('Please select an image or video file.'); return } const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES; if (file.size > maxBytes) { alert(`${isVideo ? 'Video' : 'Image'} too large (${formatBytes(file.size)}). Limit: ${formatBytes(maxBytes)}.`); return } try { const payload = await fileToDataUrl(file, { kind: isVideo ? 'video' : 'image', maxBytes }); if (isVideo) { form.image_base64 = null; form.video_base64 = payload.base64 } else { form.video_base64 = null; form.image_base64 = payload.base64 } mediaPreview.value = payload.base64; mediaKind.value = payload.kind; mediaBytes.value = payload.bytes } catch (err) { alert(err instanceof Error ? err.message : 'Could not read the file.') } }
+async function onMedia(event: Event) { const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file) return; const isVideo = file.type.startsWith('video/'); const isImage = file.type.startsWith('image/'); if (!isVideo && !isImage) { toast.error('Please choose an image or video file.'); input.value = ''; return } const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES; if (file.size > maxBytes) { toast.error(`${isVideo ? 'Video' : 'Image'} too large (${formatBytes(file.size)}). Limit: ${formatBytes(maxBytes)}.`); input.value = ''; return } try { const payload = await fileToDataUrl(file, { kind: isVideo ? 'video' : 'image', maxBytes }); if (isVideo) { form.image_base64 = null; form.video_base64 = payload.base64 } else { form.video_base64 = null; form.image_base64 = payload.base64 } mediaPreview.value = payload.base64; mediaKind.value = payload.kind; mediaBytes.value = payload.bytes; mediaName.value = file.name; mediaOrigin.value = 'local' } catch (err) { toast.error(err instanceof Error ? err.message : 'Could not read the file.') } finally { input.value = '' } }
 
-function clearMedia() { form.image_base64 = null; form.video_base64 = null; mediaPreview.value = null; mediaKind.value = null; mediaBytes.value = 0 }
+function clearMedia() { form.image_base64 = null; form.video_base64 = null; mediaPreview.value = null; mediaKind.value = null; mediaBytes.value = 0; mediaName.value = ''; mediaOrigin.value = null }
 
 async function downloadMedia() { if (!mediaPreview.value) return; const mime = mediaPreview.value.match(/data:(.*?);/)![1] ?? 'application/octet-stream'; const ext = mime.split('/')[1] || (mediaKind.value === 'video' ? 'mp4' : 'jpg'); downloadDataUrl(mediaPreview.value, slugify(`${props.post?.day || 'media'}_${props.post?.topic_key || 'post'}`) + '.' + ext) }
 
-function openGoogleDrivePicker() { gdriveSelectionMode.value = form.format === 'Carousel' ? 'folder' : 'multiple'; gdrivePickerOpen.value = true }
+function openGoogleDrivePicker() { gdriveSelectionMode.value = form.format === 'Carousel' ? 'folder' : 'multiple'; mediaSource.value = 'gdrive'; gdrivePickerOpen.value = true }
 
-function onGoogleDriveSelect(mediaFiles: Array<{ id: string; name: string; mimeType: string; size: number; dataUrl: string; kind: 'image' | 'video' }>) { if (mediaFiles.length === 0) return; const firstFile = mediaFiles[0]; if (!firstFile) return; const isVideo = firstFile.kind === 'video'; if (isVideo) { form.image_base64 = null; form.video_base64 = firstFile.dataUrl } else { form.video_base64 = null; form.image_base64 = firstFile.dataUrl } mediaPreview.value = firstFile.dataUrl; mediaKind.value = firstFile.kind; mediaBytes.value = firstFile.size; if (form.format === 'Carousel' && mediaFiles.length > 1) { console.warn(`Carousel: ${mediaFiles.length} files selected from Google Drive. Current schema supports only 1 media file per post. Using first file: ${firstFile.name}`); alert(`Carousel mode: ${mediaFiles.length} files selected, but only the first (${firstFile.name}) will be used. Multi-image carousel support requires schema changes.`) } gdrivePickerOpen.value = false; mediaSource.value = 'gdrive' }
+function onGoogleDriveSelect(mediaFiles: Array<{ id: string; name: string; mimeType: string; size: number; dataUrl: string; kind: 'image' | 'video' }>) {
+  if (mediaFiles.length === 0) return
+  const firstFile = mediaFiles[0]
+  if (!firstFile) return
+  const isVideo = firstFile.kind === 'video'
+  if (isVideo) {
+    form.image_base64 = null
+    form.video_base64 = firstFile.dataUrl
+  } else {
+    form.video_base64 = null
+    form.image_base64 = firstFile.dataUrl
+  }
+  mediaPreview.value = firstFile.dataUrl
+  mediaKind.value = firstFile.kind
+  mediaBytes.value = firstFile.size
+  mediaName.value = firstFile.name
+  mediaOrigin.value = 'gdrive'
+  if (mediaFiles.length > 1) {
+    const warning = form.format === 'Carousel'
+      ? `Carousel: ${mediaFiles.length} files picked — only one media file per post is supported right now, so “${firstFile.name}” was used.`
+      : `${mediaFiles.length} files picked — a post holds one media file, so “${firstFile.name}” was used.`
+    toast.push(warning, 'info', 7000)
+  } else {
+    toast.success('Media added from Google Drive.')
+  }
+  gdrivePickerOpen.value = false
+  mediaSource.value = 'gdrive'
+}
 
-async function handleSubmit() { if (!form.topic_key) { alert('Please select a topic — every post must be linked to one.'); return } const draft: any = { id: form.id || undefined, day: form.day, scheduled_at: form.scheduled_at || null, topic_key: form.topic_key, format: form.format, status: form.status, title: form.title, caption: form.caption, hashtags: form.hashtags }; if (form.image_base64) { draft.image_base64 = form.image_base64; draft.image_name = 'upload'; draft.image_bytes = mediaKind.value === 'image' ? mediaBytes.value : null } else if (props.post) draft.image_base64 = null; if (form.video_base64) { draft.video_base64 = form.video_base64; draft.video_name = 'upload'; draft.video_bytes = mediaKind.value === 'video' ? mediaBytes.value : null } else if (props.post) draft.video_base64 = null; saving.value = true; emit('save', draft) }
+/** Closing the picker without picking anything: go back to the upload panel (unless Drive media is already attached). */
+function onGoogleDriveCancel() {
+  gdrivePickerOpen.value = false
+  if (mediaOrigin.value !== 'gdrive') mediaSource.value = 'local'
+}
+
+async function handleSubmit() { if (!form.topic_key) { toast.error('Please select a topic — every post must be linked to one.'); return } const draft: any = { id: form.id || undefined, day: form.day, scheduled_at: form.scheduled_at || null, topic_key: form.topic_key, format: form.format, status: form.status, title: form.title, caption: form.caption, hashtags: form.hashtags }; if (form.image_base64) { draft.image_base64 = form.image_base64; draft.image_name = 'upload'; draft.image_bytes = mediaKind.value === 'image' ? mediaBytes.value : null } else if (props.post) draft.image_base64 = null; if (form.video_base64) { draft.video_base64 = form.video_base64; draft.video_name = 'upload'; draft.video_bytes = mediaKind.value === 'video' ? mediaBytes.value : null } else if (props.post) draft.video_base64 = null; saving.value = true; emit('save', draft) }
 
 async function handleDelete() { if (!props.post?.id) return; if (window.confirm('Delete this post?')) { emit('delete', props.post.id); close() } }
 </script>

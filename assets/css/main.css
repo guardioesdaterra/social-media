@@ -295,6 +295,24 @@
     color: #fff;
   }
 
+  /* Visible keyboard focus everywhere (buttons, icon buttons, segmented tabs) */
+  .eg-btn-apple:focus-visible,
+  .eg-icon-btn:focus-visible,
+  .eg-segmented-item:focus-visible,
+  .eg-btn-primary:focus-visible,
+  .eg-btn-ghost:focus-visible,
+  .eg-btn-danger:focus-visible,
+  .eg-btn-glass-red:focus-visible {
+    outline: 2px solid rgba(52, 211, 153, 0.75);
+    outline-offset: 2px;
+  }
+
+  /* We render our own clear button on search fields */
+  .eg-field[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
   /* ——— Segmented control (Apple-style tabs) ——— */
   .eg-segmented {
     @apply inline-flex rounded-xl p-1;
