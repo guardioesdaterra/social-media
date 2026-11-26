@@ -1,23 +1,32 @@
-import { MAX_IMAGE_BYTES } from '~/lib/constants'
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from '~/lib/constants'
 
-export interface ImagePayload {
+export type MediaKind = 'image' | 'video'
+
+export interface MediaPayload {
   base64: string
   mime: string
   name: string
   bytes: number
+  kind: MediaKind
 }
 
-/** Lê um `File` como data URL **sem recompressão** (qualidade integral). */
-export function fileToDataUrl(file: File): Promise<ImagePayload> {
+export type ImagePayload = MediaPayload
+
+/** Lê um `File` (imagem ou vídeo) como data URL **sem recompressão** (qualidade integral). */
+export function fileToDataUrl(
+  file: File,
+  opts: { kind: MediaKind; maxBytes: number },
+): Promise<MediaPayload> {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
-      reject(new Error('Selecione um arquivo de imagem.'))
+    const prefix = opts.kind === 'image' ? 'image/' : 'video/'
+    if (!file.type.startsWith(prefix)) {
+      reject(new Error(`Selecione um arquivo de ${opts.kind}.`))
       return
     }
-    if (file.size > MAX_IMAGE_BYTES) {
+    if (file.size > opts.maxBytes) {
       reject(
         new Error(
-          `Imagem muito grande (${formatBytes(file.size)}). Limite: ${formatBytes(MAX_IMAGE_BYTES)}.`,
+          `${opts.kind === 'image' ? 'Imagem' : 'Vídeo'} muito grande (${formatBytes(file.size)}). Limite: ${formatBytes(opts.maxBytes)}.`,
         ),
       )
       return
@@ -30,6 +39,7 @@ export function fileToDataUrl(file: File): Promise<ImagePayload> {
         mime: file.type,
         name: file.name,
         bytes: file.size,
+        kind: opts.kind,
       })
     reader.readAsDataURL(file)
   })

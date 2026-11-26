@@ -62,6 +62,11 @@ export interface CalendarPost {
   image_mime: string | null
   image_name: string | null
   image_bytes: number | null
+  /** Data URL (`data:video/mp4;base64,...`) stored in Postgres, not in S3. */
+  video_base64: string | null
+  video_mime: string | null
+  video_name: string | null
+  video_bytes: number | null
   /** Order inside `day`. */
   sort_order: number
   created_at?: string
@@ -142,6 +147,10 @@ export interface PostDraft {
   image_mime?: string | null
   image_name?: string | null
   image_bytes?: number | null
+  video_base64?: string | null
+  video_mime?: string | null
+  video_name?: string | null
+  video_bytes?: number | null
   sort_order?: number
 }
 

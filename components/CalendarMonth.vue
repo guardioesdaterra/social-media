@@ -1,12 +1,12 @@
 <template>
   <section class="eg-card overflow-hidden" aria-label="Month calendar">
     <!-- Weekday headers -->
-    <div class="grid grid-cols-7 border-b border-[var(--eg-border)] bg-white/[0.02]">
+    <div class="grid grid-cols-7 border-b border-[var(--eg-border)] rounded-t-xl overflow-hidden bg-white/[0.02]">
       <div
         v-for="(d, i) in DOW_SHORT"
         :key="d"
-        class="px-1 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider sm:text-xs"
-        :class="i === 0 ? 'text-red-400/70' : 'text-zinc-500'"
+        class="px-1 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider sm:text-xs rounded-lg transition hover:bg-white/5"
+        :class="i === 0 ? 'text-red-400/90 bg-red-500/10' : 'text-zinc-500'"
       >
         <span class="hidden sm:inline">{{ DOW_FULL[i] }}</span>
         <span class="sm:hidden">{{ d }}</span>
@@ -14,15 +14,14 @@
     </div>
 
     <!-- Weeks -->
-    <div class="grid grid-cols-7">
+    <div class="grid grid-cols-7 gap-1">
       <template v-for="(week, wi) in weeksView" :key="wi">
         <button
           v-for="(cell, ci) in week"
           :key="cell.date"
           type="button"
-          class="group relative min-h-[62px] border-b border-r border-[var(--eg-border)] p-1 text-left transition
-            sm:min-h-[112px] sm:p-1.5"
-          :class="[(ci + 1) % 7 === 0 ? 'border-r-0' : '', cellClasses(cell), { 'ring-2 ring-[var(--eg-accent)]': dragOverCell === cell.date }]"
+          class="group relative min-h-[62px] rounded-xl overflow-hidden border border-[var(--eg-border)] p-1 text-left transition hover:bg-white/5 sm:min-h-[112px] sm:p-1.5 eg-card-hover"
+          :class="[cellClasses(cell), { 'ring-2 ring-[var(--eg-accent)]': dragOverCell === cell.date }]"
           :aria-label="cell.aria"
           :aria-pressed="cell.date === selected"
           @click="emit('select', cell.date)"

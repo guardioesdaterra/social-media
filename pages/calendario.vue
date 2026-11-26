@@ -2,10 +2,10 @@
   <AuthGate>
     <div class="flex min-h-0 flex-1 flex-col">
       <!-- Toolbar -->
-      <header class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--eg-border)] px-3 py-2.5 sm:px-4 bg-black/60 backdrop-blur sticky top-0 z-20">
+      <header class="flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3 sm:p-4 border border-[var(--eg-border)] bg-black/60 backdrop-blur-xl backdrop-saturate-150 sticky top-0 z-20 shadow-lg eg-card-hover">
         <div class="flex items-center gap-2 shrink-0">
           <button
-            class="eg-btn-ghost !px-2.5 !py-1.5 rounded-lg"
+            class="eg-btn-glass-red !px-2.5 !py-1.5"
             aria-label="Previous month"
             :disabled="navDisabled(-1)"
             @click="shift(-1)"
@@ -13,14 +13,14 @@
             ‹
           </button>
           <button
-            class="eg-btn-ghost !px-2.5 !py-1.5 rounded-lg"
+            class="eg-btn-glass-red !px-2.5 !py-1.5"
             aria-label="Next month"
             :disabled="navDisabled(1)"
             @click="shift(1)"
           >
             ›
           </button>
-          <button class="eg-btn-ghost !px-2.5 !py-1.5 text-xs font-medium" @click="goToday">
+          <button class="eg-btn-glass-red !px-2.5 !py-1.5 text-xs font-medium" @click="goToday">
             Today
           </button>
         </div>
@@ -31,24 +31,24 @@
 
         <div class="flex items-center gap-2">
           <label class="text-[11px] text-zinc-500 shrink-0">View</label>
-          <div class="inline-flex border border-[var(--eg-border)] rounded-lg bg-[var(--eg-panel-2)]">
+          <div class="eg-segmented">
             <button
-              class="px-2.5 py-1 text-xs text-sm text-zinc-400 hover:text-white transition"
-              :class="{ 'bg-white/20 text-white': view === 'month' }"
+              class="eg-segmented-item"
+              :class="{ 'is-active': view === 'month' }"
               @click="view = 'month'"
             >
               Month
             </button>
             <button
-              class="px-2.5 py-1 text-xs text-sm text-zinc-400 hover:text-white transition"
-              :class="{ 'bg-white/20 text-white': view === 'week' }"
+              class="eg-segmented-item"
+              :class="{ 'is-active': view === 'week' }"
               @click="view = 'week'"
             >
               Week
             </button>
             <button
-              class="px-2.5 py-1 text-xs text-sm text-zinc-400 hover:text-white transition"
-              :class="{ 'bg-white/20 text-white': view === 'list' }"
+              class="eg-segmented-item"
+              :class="{ 'is-active': view === 'list' }"
               @click="view = 'list'"
             >
               List
@@ -57,31 +57,31 @@
 
           <div class="flex items-center gap-1">
             <span class="text-[10px] text-zinc-500 shrink-0">Filter</span>
-            <div class="inline-flex border border-[var(--eg-border)] rounded-lg bg-[var(--eg-panel-2)]">
+            <div class="eg-segmented">
               <button
-                class="px-2 py-1 text-xs rounded transition"
-                :class="{ 'bg-white/20 text-white': filter === 'all' }"
+                class="eg-segmented-item"
+                :class="{ 'is-active': filter === 'all' }"
                 @click="filter = 'all'"
               >
                 All
               </button>
               <button
-                class="px-2 py-1 text-xs rounded transition"
-                :class="{ 'bg-white/20 text-white': filter === 'posts' }"
+                class="eg-segmented-item"
+                :class="{ 'is-active': filter === 'posts' }"
                 @click="filter = 'posts'"
               >
                 Posts
               </button>
               <button
-                class="px-2 py-1 text-xs rounded transition"
-                :class="{ 'bg-white/20 text-white': filter === 'newsletters' }"
+                class="eg-segmented-item"
+                :class="{ 'is-active': filter === 'newsletters' }"
                 @click="filter = 'newsletters'"
               >
                 Newsletters
               </button>
               <button
-                class="px-2 py-1 text-xs rounded transition"
-                :class="{ 'bg-white/20 text-white': filter === 'site_updates' }"
+                class="eg-segmented-item"
+                :class="{ 'is-active': filter === 'site_updates' }"
                 @click="filter = 'site_updates'"
               >
                 Site updates
@@ -90,7 +90,7 @@
           </div>
 
           <button
-            class="eg-btn-ghost !px-2.5 !py-1.5 text-xs shrink-0"
+            class="eg-btn-glass-red !px-2.5 !py-1.5 text-xs shrink-0"
             :class="{ 'bg-white/10': panelMode === 'topics' }"
             @click="toggleTopics"
           >

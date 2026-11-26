@@ -1,5 +1,5 @@
 <template>
-  <section class="eg-card overflow-hidden" aria-label="Week calendar">
+  <section class="eg-card overflow-hidden rounded-2xl eg-card-hover" aria-label="Week calendar">
     <!-- Week grid -->
     <div class="grid grid-cols-7 border-t border-[var(--eg-border)]">
       <div

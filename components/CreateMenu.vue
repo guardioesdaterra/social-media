@@ -1,7 +1,7 @@
 <template>
   <div class="relative inline-block">
     <button
-      class="eg-btn-apple-secondary rounded-lg px-3 py-1.5 text-xs shrink-0"
+      class="eg-btn-glass-red rounded-xl px-3 py-1.5 text-xs shrink-0"
       aria-label="Create event"
       :aria-expanded="open"
       aria-haspopup="menu"
@@ -34,7 +34,7 @@
           <button
             v-for="item in items"
             :key="item.kind"
-            class="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition duration-150 hover:bg-white/10 active:scale-[0.98]"
+            class="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition duration-150 eg-hover-red active:scale-[0.98]"
             role="menuitem"
             @click="select(item.kind)"
           >

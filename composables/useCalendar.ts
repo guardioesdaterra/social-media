@@ -73,6 +73,7 @@ export function useCalendar() {
   const stats = computed(() => {
     const total = posts.value.length
     const withImage = posts.value.filter((p) => p.image_base64).length
+    const withVideo = posts.value.filter((p) => p.video_base64).length
     const days = new Set(posts.value.map((p) => p.day)).size
     const byFormat: Record<string, number> = {}
     const byTopic: Record<string, number> = {}
@@ -82,7 +83,7 @@ export function useCalendar() {
       byTopic[p.topic_key] = (byTopic[p.topic_key] || 0) + 1
       byStatus[p.status] = (byStatus[p.status] || 0) + 1
     }
-    return { total, withImage, days, byFormat, byTopic, byStatus }
+    return { total, withImage, withVideo, days, byFormat, byTopic, byStatus }
   })
 
   async function authHeaders(): Promise<Record<string, string>> {

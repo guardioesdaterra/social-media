@@ -1,5 +1,5 @@
 <template>
-  <section class="eg-card overflow-hidden" aria-label="Calendar list">
+  <section class="eg-card overflow-hidden rounded-2xl eg-card-hover" aria-label="Calendar list">
     <div class="overflow-y-auto">
       <div v-for="(day, di) in groupedDays" :key="day" class="mb-4">
         <div class="flex items-center gap-2 px-3 py-2 border-b border-[var(--eg-border)] bg-white/[0.02]">

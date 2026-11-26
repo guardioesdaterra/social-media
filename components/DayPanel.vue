@@ -15,7 +15,7 @@
       <div
         v-for="item in items"
         :key="item.id"
-        class="eg-card p-3 relative group cursor-move"
+        class="eg-card p-3 relative group cursor-move rounded-2xl eg-card-hover"
         :style="{ opacity: dragSource?.id === item.id ? 0.4 : 1 }"
         draggable="true"
         @dragstart="onItemDragStart($event, item)"
@@ -62,23 +62,33 @@
                   #{{ tag }}
                 </span>
               </div>
-              <div v-if="postOf(item)?.image_base64" class="mt-2 flex items-center gap-2">
-                <img
-                  :src="postOf(item)?.image_base64 ?? undefined"
-                  alt=""
-                  class="h-12 w-16 rounded object-cover border border-[var(--eg-border)]"
-                />
+              <div v-if="postOf(item)?.image_base64 || postOf(item)?.video_base64" class="mt-2 flex items-center gap-2">
+                <template v-if="postOf(item)?.video_base64">
+                  <video
+                    :src="postOf(item)?.video_base64 ?? undefined"
+                    alt=""
+                    class="h-12 w-16 rounded object-cover border border-[var(--eg-border)]"
+                    muted playsinline
+                  />
+                </template>
+                <template v-else>
+                  <img
+                    :src="postOf(item)?.image_base64 ?? undefined"
+                    alt=""
+                    class="h-12 w-16 rounded object-cover border border-[var(--eg-border)]"
+                  />
+                </template>
                 <button
                   class="ml-auto eg-btn-ghost !px-1.5 !py-1 text-[10px] text-red-400 hover:text-red-300"
-                  title="Remove image"
-                  @click.stop="removeImage(postOf(item)?.id)"
+                  title="Remove media"
+                  @click.stop="removeMedia(postOf(item)?.id)"
                 >
                   ✕
                 </button>
                 <button
                   class="eg-btn-ghost !px-1.5 !py-1 text-[10px] text-zinc-400 hover:text-zinc-200"
                   title="Download full quality"
-                  @click.stop="downloadImage(postOf(item)?.id)"
+                  @click.stop="downloadMedia(postOf(item)?.id)"
                 >
                   ⤓
                 </button>
@@ -244,21 +254,34 @@ function onItemContext(e: MouseEvent, item: CalendarItem) {
   ctx.openFromEvent(e, items)
 }
 
-async function removeImage(id: string | undefined) {
+async function removeMedia(id: string | undefined) {
   if (!id) return
   const item = props.items.find((i): i is CalendarItemPost => i.kind === 'post' && i.post.id === id)
   if (!item) return
-  if (window.confirm('Remove the image from this post?')) {
-    emit('save', { id, day: item.post.day, topic_key: item.post.topic_key, image_base64: null })
+  if (window.confirm('Remove the media from this post?')) {
+    emit('save', {
+      id,
+      day: item.post.day,
+      topic_key: item.post.topic_key,
+      image_base64: null,
+      video_base64: null,
+    })
   }
 }
 
-async function downloadImage(id: string | undefined) {
+async function downloadMedia(id: string | undefined) {
   if (!id) return
   const item = props.items.find((i): i is CalendarItemPost => i.kind === 'post' && i.post.id === id)
-  if (!item?.post.image_base64) return
+  const post = item?.post
+  if (!post) return
   const { downloadDataUrl, slugify } = await import('~/lib/image')
-  downloadDataUrl(item.post.image_base64, slugify(`${item.post.day}_${item.post.topic_key}`) + '.' + (item.post.image_mime?.split('/')[1] || 'jpg'))
+  if (post.video_base64) {
+    downloadDataUrl(post.video_base64, slugify(`${post.day}_${post.topic_key}`) + '.' + (post.video_mime?.split('/')[1] || 'mp4'))
+    return
+  }
+  if (post.image_base64) {
+    downloadDataUrl(post.image_base64, slugify(`${post.day}_${post.topic_key}`) + '.' + (post.image_mime?.split('/')[1] || 'jpg'))
+  }
 }
 
 /** Drag: item picked up. */

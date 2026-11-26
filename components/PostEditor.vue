@@ -149,26 +149,31 @@
               <!-- Media -->
               <section class="eg-section">
                 <h3 class="eg-section-title">Media</h3>
-                <p class="eg-section-sub">Full quality image, stored in Postgres.</p>
+                <p class="eg-section-sub">Full quality image or video, stored in Postgres.</p>
 
                 <div class="mt-4 space-y-3">
                   <label class="eg-dropzone">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="1.6" /><path d="m21 15-4.2-4.2a2 2 0 0 0-2.8 0L4 21" /></svg>
-                    <span class="text-sm font-medium text-zinc-300">Click to choose an image</span>
-                    <span class="text-[11px] text-zinc-500">PNG, JPG or WebP · max 4 MB · replaces any existing image</span>
-                    <input type="file" accept="image/*" class="sr-only" @change="onImage" />
+                    <span class="text-sm font-medium text-zinc-300">Click to choose an image or video</span>
+                    <span class="text-[11px] text-zinc-500">PNG, JPG or WebP (max 4 MB) · MP4 or MOV (max 100 MB) · replaces any existing media</span>
+                    <input type="file" accept="image/*,video/*" class="sr-only" @change="onMedia" />
                   </label>
 
-                  <div v-if="imagePreview" class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                    <img :src="imagePreview" alt="" class="h-16 w-24 shrink-0 rounded-lg object-cover ring-1 ring-white/10" />
+                  <div v-if="mediaPreview" class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                    <template v-if="mediaKind === 'video'">
+                      <video :src="mediaPreview" alt="" class="h-16 w-24 shrink-0 rounded-lg object-cover ring-1 ring-white/10" muted playsinline />
+                    </template>
+                    <template v-else>
+                      <img :src="mediaPreview" alt="" class="h-16 w-24 shrink-0 rounded-lg object-cover ring-1 ring-white/10" />
+                    </template>
                     <div class="min-w-0 flex-1">
-                      <p class="truncate text-xs font-medium text-zinc-200">Current image</p>
-                      <p class="mt-0.5 text-[11px] text-zinc-500">{{ formatBytes(imageBytes) }}</p>
+                      <p class="truncate text-xs font-medium text-zinc-200">Current {{ mediaKind }}</p>
+                      <p class="mt-0.5 text-[11px] text-zinc-500">{{ formatBytes(mediaBytes) }}</p>
                     </div>
-                    <button type="button" class="eg-btn-apple-secondary rounded-lg px-3 py-1.5 text-xs" @click="downloadImage">
+                    <button type="button" class="eg-btn-apple-secondary rounded-lg px-3 py-1.5 text-xs" @click="downloadMedia">
                       ⤓ Download
                     </button>
-                    <button type="button" class="eg-icon-btn text-red-400" aria-label="Remove image" @click="clearImage">
+                    <button type="button" class="eg-icon-btn text-red-400" aria-label="Remove media" @click="clearMedia">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                     </button>
                   </div>
@@ -214,8 +219,13 @@
 
                 <!-- Media Area -->
                 <div class="relative aspect-square bg-zinc-900">
-                  <template v-if="imagePreview">
-                    <img :src="imagePreview" alt="Post media" class="h-full w-full object-cover" />
+                  <template v-if="mediaPreview">
+                    <template v-if="mediaKind === 'video'">
+                      <video :src="mediaPreview" alt="Post media" class="h-full w-full object-cover" muted playsinline />
+                    </template>
+                    <template v-else>
+                      <img :src="mediaPreview" alt="Post media" class="h-full w-full object-cover" />
+                    </template>
                     <!-- Format badge overlay -->
                     <div v-if="form.format === 'Reel' || form.format === 'Video'" class="absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 backdrop-blur-sm">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
@@ -288,8 +298,13 @@
               <div v-if="form.format === 'Story'" class="mt-6">
                 <h4 class="mb-3 text-center text-xs font-medium text-zinc-500 uppercase tracking-wider">Story Preview</h4>
                 <div class="mx-auto aspect-[9/16] max-w-[250px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl">
-                  <template v-if="imagePreview">
-                    <img :src="imagePreview" alt="Story media" class="h-full w-full object-cover" />
+                  <template v-if="mediaPreview">
+                    <template v-if="mediaKind === 'video'">
+                      <video :src="mediaPreview" alt="Story media" class="h-full w-full object-cover" muted playsinline />
+                    </template>
+                    <template v-else>
+                      <img :src="mediaPreview" alt="Story media" class="h-full w-full object-cover" />
+                    </template>
                     <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                       <p class="text-sm font-medium text-white truncate">{{ form.title || selectedTopic?.label }}</p>
                     </div>
@@ -332,7 +347,8 @@
 <script setup lang="ts">
 import type { CalendarPost, PostFormat, PostStatus, Topic } from '~/lib/types'
 import { FORMATS, STATUSES } from '~/lib/types'
-import { formatBytes, downloadDataUrl, slugify } from '~/lib/image'
+import { formatBytes, downloadDataUrl, fileToDataUrl, slugify } from '~/lib/image'
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from '~/lib/constants'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
 import { computed, reactive, ref, watch } from 'vue'
 
@@ -400,6 +416,7 @@ const form = reactive<{
   caption: string
   hashtags: string
   image_base64: string | null
+  video_base64: string | null
 }>({
   id: '',
   day: '',
@@ -411,12 +428,14 @@ const form = reactive<{
   caption: '',
   hashtags: '',
   image_base64: null,
+  video_base64: null,
 })
 
 const saving = ref(false)
 
-const imagePreview = ref<string | null>(null)
-const imageBytes = ref(0)
+const mediaPreview = ref<string | null>(null)
+const mediaKind = ref<'image' | 'video' | null>(null)
+const mediaBytes = ref(0)
 
 function close() {
   emit('update:open', false)
@@ -442,34 +461,77 @@ function resetForm() {
   form.title = post?.title ?? ''
   form.caption = post?.caption ?? ''
   form.hashtags = post?.hashtags ?? ''
-  imagePreview.value = post?.image_base64 ?? null
-  imageBytes.value = post?.image_bytes ?? 0
+  form.image_base64 = post?.image_base64 ?? null
+  form.video_base64 = post?.video_base64 ?? null
+  if (post?.video_base64) {
+    mediaPreview.value = post.video_base64
+    mediaKind.value = 'video'
+    mediaBytes.value = post.video_bytes ?? 0
+  } else if (post?.image_base64) {
+    mediaPreview.value = post.image_base64
+    mediaKind.value = 'image'
+    mediaBytes.value = post.image_bytes ?? 0
+  } else {
+    mediaPreview.value = null
+    mediaKind.value = null
+    mediaBytes.value = 0
+  }
 }
 
-function onImage(event: Event) {
+async function onMedia(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    const dataUrl = String(reader.result || '')
-    form.image_base64 = dataUrl
-    imagePreview.value = dataUrl
-    imageBytes.value = Math.floor(((dataUrl.split(',')[1] || '').length * 3) / 4)
+  const isVideo = file.type.startsWith('video/')
+  const isImage = file.type.startsWith('image/')
+  if (!isVideo && !isImage) {
+    alert('Please select an image or video file.')
+    return
   }
-  reader.readAsDataURL(file)
+  const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES
+  if (file.size > maxBytes) {
+    alert(
+      `${isVideo ? 'Video' : 'Image'} too large (${formatBytes(file.size)}). Limit: ${formatBytes(maxBytes)}.`,
+    )
+    return
+  }
+  try {
+    const payload = await fileToDataUrl(file, {
+      kind: isVideo ? 'video' : 'image',
+      maxBytes,
+    })
+    // One media slot per post: picking a new file replaces the other kind.
+    if (isVideo) {
+      form.image_base64 = null
+      form.video_base64 = payload.base64
+    } else {
+      form.video_base64 = null
+      form.image_base64 = payload.base64
+    }
+    mediaPreview.value = payload.base64
+    mediaKind.value = payload.kind
+    mediaBytes.value = payload.bytes
+  } catch (err) {
+    alert(err instanceof Error ? err.message : 'Could not read the file.')
+  }
 }
 
-function clearImage() {
+function clearMedia() {
   form.image_base64 = null
-  imagePreview.value = null
-  imageBytes.value = 0
+  form.video_base64 = null
+  mediaPreview.value = null
+  mediaKind.value = null
+  mediaBytes.value = 0
 }
 
-async function downloadImage() {
-  if (!props.post?.image_base64) return
-  const mime = props.post.image_mime?.split('/')[1] || 'jpg'
-  downloadDataUrl(props.post.image_base64, slugify(`${props.post.day}_${props.post.topic_key}`) + '.' + mime)
+async function downloadMedia() {
+  if (!mediaPreview.value) return
+  const mime = mediaPreview.value.match(/data:(.*?);/)![1] ?? 'application/octet-stream'
+  const ext = mime.split('/')[1] || (mediaKind.value === 'video' ? 'mp4' : 'jpg')
+  downloadDataUrl(
+    mediaPreview.value,
+    slugify(`${props.post?.day || 'media'}_${props.post?.topic_key || 'post'}`) + '.' + ext,
+  )
 }
 
 async function handleSubmit() {
@@ -493,10 +555,18 @@ async function handleSubmit() {
   if (form.image_base64) {
     draft.image_base64 = form.image_base64
     draft.image_name = 'upload'
-    draft.image_bytes = imageBytes.value
+    draft.image_bytes = mediaKind.value === 'image' ? mediaBytes.value : null
   } else if (props.post) {
-    // explicit clear when editing and image removed
+    // explicit clear when editing and media removed
     draft.image_base64 = null
+  }
+
+  if (form.video_base64) {
+    draft.video_base64 = form.video_base64
+    draft.video_name = 'upload'
+    draft.video_bytes = mediaKind.value === 'video' ? mediaBytes.value : null
+  } else if (props.post) {
+    draft.video_base64 = null
   }
 
   saving.value = true
