@@ -32,6 +32,8 @@ const DEFAULT_POPUP_HEIGHT = 700
 
 export function usePopupAuth(opts: UsePopupAuthOptions = {}) {
   const supabase = useSupabase()
+  const cfg = useRuntimeConfig()
+  const appBase = cfg.app.baseURL || import.meta.env.BASE_URL || '/'
   const trusted = new Set([...DEFAULT_TRUSTED_ORIGINS, ...(opts.trustedOrigins ?? [])])
   const popupWidth = opts.popupWidth ?? DEFAULT_POPUP_WIDTH
   const popupHeight = opts.popupHeight ?? DEFAULT_POPUP_HEIGHT
@@ -42,8 +44,7 @@ export function usePopupAuth(opts: UsePopupAuthOptions = {}) {
   let messageUnsubscribe: (() => void) | null = null
 
   function callbackUrl(): string {
-    const cfg = useRuntimeConfig()
-    const base = cfg.app.baseURL || import.meta.env.BASE_URL || '/'
+    const base = appBase
     return `${window.location.origin}${base.replace(/\/$/, '')}/auth/callback`
   }
 

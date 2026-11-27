@@ -23,6 +23,8 @@ let initialized = false
 export function useSupabaseAuth() {
   const supabase = useSupabase()
   const mock = isMock()
+  const cfg = useRuntimeConfig()
+  const appBase = cfg.app.baseURL || import.meta.env.BASE_URL || '/'
 
   async function evaluateGate(): Promise<void> {
     // Re-verifying a session that already passed the gate must NOT flip the UI
@@ -158,8 +160,7 @@ export function useSupabaseAuth() {
   }
 
   function callbackUrl(): string {
-    const cfg = useRuntimeConfig()
-    const base = cfg.app.baseURL || import.meta.env.BASE_URL || '/'
+    const base = appBase
     return `${window.location.origin}${base.replace(/\/$/, '')}/auth/callback`
   }
 
