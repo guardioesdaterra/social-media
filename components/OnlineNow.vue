@@ -5,13 +5,13 @@
       class="fixed top-4 left-4 z-[120] flex flex-col gap-2 pointer-events-none"
     >
       <div
-        v-for="u in users"
+        v-for="[_, u] in users"
         :key="u.id"
         class="pointer-events-auto flex items-center gap-2.5 rounded-lg border border-[var(--eg-border)] bg-black/70 backdrop-blur-md px-2.5 py-1.5 text-xs shadow-lg transition hover:bg-black/80"
         :class="{ 'ring-1 ring-[var(--eg-accent)]': u.activity !== 'idle' }"
       >
         <img
-          :src="u.avatar"
+          :src="u.avatar || '/EG-Logo.webp'"
           :alt="u.name"
           class="h-6 w-6 rounded-full border border-white/10 object-cover shrink-0"
         />

@@ -17,13 +17,13 @@ import { usePresence } from '~/composables/usePresence'
 
 useHead({ htmlAttrs: { lang: 'pt-BR' } })
 
-const { initPresence, stop } = usePresence()
+const { initPresence, stopPresence } = usePresence()
 
 onMounted(() => {
   initPresence()
 })
 
 onUnmounted(() => {
-  stop()
+  stopPresence()
 })
 </script>

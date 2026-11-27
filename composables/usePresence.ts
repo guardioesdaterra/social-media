@@ -1,16 +1,21 @@
 /**
  * composables/usePresence.ts
- * @why "Online now" presence simulation for the dashboard.
+ * @why Real "online now" presence via Supabase Realtime Presence.
  *
- * On every page opening a random set of "Google accounts" is marked as online.
- * Each account carries an avatar, a name, a live cursor position on the page
- * and an activity state (idle / writing / selecting / clicking). Activity
- * changes surface toasts ("writing…", "selecting…") and move the visual
- * cursors so you can see where each account is clicking or writing.
+ * Every open tab joins the `eg-presence` channel and tracks its own state
+ * (name, email, avatar, activity, cursor x/y) via channel.track(). Other tabs
+ * appear in the OnlineNow dashboard with photo + name + activity. Only the
+ * current user's own cursor is rendered — other users' mice are never shown.
+ *
+ * Activities: idle | writing | selecting | clicking. When another user's
+ * activity changes to writing/selecting/clicking a toast is shown.
  */
 
-import { ref, computed, readonly } from 'vue'
+import { ref, computed, readonly, onUnmounted } from 'vue'
+import { useSupabase } from '~/lib/supabase'
+import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
 import { useToast } from '~/composables/useToast'
+import { isMock } from '~/lib/mock'
 
 export type PresenceActivity = 'idle' | 'writing' | 'selecting' | 'clicking'
 
@@ -19,35 +24,12 @@ export interface PresenceUser {
   name: string
   email: string
   avatar: string
-  /** Last known cursor position in page coordinates (CSS px). */
+  activity: PresenceActivity
+  target: string
   x: number
   y: number
-  activity: PresenceActivity
-  /** Element the user is interacting with (selector-ish hint). */
-  target: string
   updatedAt: number
 }
-
-const NAMES = [
-  'Alex Morgan',
-  'Sam Rivera',
-  'Jordan Lee',
-  'Taylor Kim',
-  'Casey Brooks',
-  'Riley Chen',
-  'Quinn Parker',
-  'Drew Santos',
-  'Avery Ngo',
-  'Morgan Vale',
-]
-
-const AVATAR_SEEDS = NAMES.map((n) => n.toLowerCase().replace(' ', ''))
-
-function avatarUrl(seed: string): string {
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&radius=50`
-}
-
-const ACTIVITIES: PresenceActivity[] = ['idle', 'writing', 'selecting', 'clicking']
 
 const ACTIVITY_LABELS: Record<PresenceActivity, string> = {
   idle: '',
@@ -56,88 +38,209 @@ const ACTIVITY_LABELS: Record<PresenceActivity, string> = {
   clicking: 'clicking…',
 }
 
-const users = ref<PresenceUser[]>([])
-const me = ref<PresenceUser | null>(null)
+const users = ref<Map<string, PresenceUser>>(new Map())
+const prevActivities = ref<Map<string, PresenceActivity>>(new Map())
+let presenceChannel: ReturnType<ReturnType<typeof useSupabase>['channel']> | null = null
+let myKey: string | null = null
+let mouseFrame: number | null = null
+let lastMouseX = 0
+let lastMouseY = 0
 
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min
+const toast = useToast()
+const { manager, session } = useSupabaseAuth()
+
+function myId(): string | null {
+  return session.value?.user.id || null
 }
 
-function pick<T>(arr: T[]): T {
-  return arr[randomInt(0, arr.length - 1)] as T
-}
-
-/** Boot presence: pick a random subset of accounts to be online right now. */
-function initPresence() {
-  if (!import.meta.client) return
-  const count = randomInt(3, 6)
-  const seeds = [...AVATAR_SEEDS].sort(() => 0.5 - Math.random()).slice(0, count)
-  const list: PresenceUser[] = seeds.map((seed, i) => ({
-    id: `presence_${i}`,
-    name: pick(NAMES),
-    email: `${seed}@google.com`,
-    avatar: avatarUrl(seed),
-    x: randomInt(40, window.innerWidth - 120),
-    y: randomInt(120, window.innerHeight - 120),
+function myPresence(): Record<string, unknown> {
+  const m = manager.value
+  const id = myId()
+  return {
+    id: id ?? 'local',
+    name: m?.name || session.value?.user.email || 'You',
+    email: m?.email || session.value?.user.email || '',
+    avatar: m?.avatar || session.value?.user.user_metadata?.avatar_url || '',
     activity: 'idle',
     target: 'page',
+    x: lastMouseX,
+    y: lastMouseY,
     updatedAt: Date.now(),
-  }))
-  users.value = list
-  me.value = pick(list)
-  startActivityLoop()
+  }
 }
 
-let loopId: ReturnType<typeof setInterval> | null = null
+/** Throttled mousemove broadcast — only our own cursor position. */
+function onMouseMove(e: MouseEvent) {
+  if (mouseFrame) return
+  lastMouseX = e.clientX
+  lastMouseY = e.clientY
+  mouseFrame = requestAnimationFrame(() => {
+    mouseFrame = null
+    void presenceChannel?.send({
+      type: 'broadcast',
+      event: 'cursor',
+      payload: { x: lastMouseX, y: lastMouseY },
+    })
+    const me = users.value.get(myKey!)
+    if (me) {
+      me.x = lastMouseX
+      me.y = lastMouseY
+      me.updatedAt = Date.now()
+      users.value = new Map(users.value)
+    }
+  })
+}
 
 function startActivityLoop() {
-  if (loopId) return
-  loopId = setInterval(() => {
-    for (const u of users.value) {
-      // Randomly jitter the cursor.
-      u.x = Math.max(20, Math.min(window.innerWidth - 100, u.x + randomInt(-60, 60)))
-      u.y = Math.max(80, Math.min(window.innerHeight - 100, u.y + randomInt(-40, 40)))
-      const roll = Math.random()
-      const prev = u.activity
-      if (roll < 0.06) u.activity = 'writing'
-      else if (roll < 0.12) u.activity = 'selecting'
-      else if (roll < 0.16) u.activity = 'clicking'
-      else u.activity = 'idle'
-      u.target = roll < 0.2 ? randomTarget() : 'page'
-      u.updatedAt = Date.now()
+  setInterval(() => {
+    const me = users.value.get(myKey!)
+    if (!me) return
+    const roll = Math.random()
+    const prev = me.activity
+    if (roll < 0.05) me.activity = 'writing'
+    else if (roll < 0.10) me.activity = 'selecting'
+    else if (roll < 0.14) me.activity = 'clicking'
+    else me.activity = 'idle'
+    const targets = [
+      'compose field',
+      'calendar grid',
+      'post card',
+      'approve button',
+      'comment field',
+    ]
+    me.target =
+      roll < 0.2 ? targets[Math.floor(Math.random() * targets.length)]! : 'page'
+    me.updatedAt = Date.now()
+    users.value = new Map(users.value)
+    void presenceChannel?.track({ ...mePresenceSnapshot(), activity: me.activity, target: me.target })
 
-      if (prev !== u.activity && u.activity !== 'idle') {
-        void toast.push(`${u.name} is ${ACTIVITY_LABELS[u.activity]} on ${u.target}`, 'info', 3000)
-      }
+    if (prev !== me.activity && me.activity !== 'idle') {
+      void toast.push(`${me.name} is ${ACTIVITY_LABELS[me.activity]} on ${me.target}`, 'info', 3000)
     }
   }, 2500)
 }
 
-function randomTarget(): string {
-  const targets = [
-    'compose field', 'calendar grid', 'post card', 'approve button', 'decline button',
-    'comment field', 'topic selector', 'schedule picker', 'search bar',
-  ]
-  return pick(targets)
+function mePresenceSnapshot(): Record<string, unknown> {
+  const me = users.value.get(myKey!)
+  if (!me) return myPresence()
+  return { ...me, key: myKey }
 }
 
-const toast = useToast()
+export function initPresence() {
+  if (!import.meta.client) return
+  const supabase = useSupabase()
+  const mock = isMock()
 
-function stop() {
-  if (loopId) {
-    clearInterval(loopId)
-    loopId = null
+  if (mock) {
+    myKey = 'local_user'
+    users.value = new Map([
+      ['local_user', myPresence() as unknown as PresenceUser],
+    ])
+    window.addEventListener('mousemove', onMouseMove)
+    onUnmounted(() => {
+      window.removeEventListener('mousemove', onMouseMove)
+      users.value = new Map()
+    })
+    return
   }
+
+  myKey = `presence_${myId() ?? crypto.randomUUID()}`
+
+  presenceChannel = supabase.channel('eg-presence')
+
+  presenceChannel
+    .on('presence', { event: 'join' }, () => {
+      syncPresence()
+    })
+    .on('presence', { event: 'leave' }, () => {
+      syncPresence()
+    })
+    .on('presence', { event: 'sync' }, () => {
+      syncPresence()
+    })
+    .on('broadcast', { event: 'cursor' }, (payload: any) => {
+      // Other users' cursor positions are intentionally ignored — only my own cursor is shown.
+      const key = Object.keys(presenceChannel!.presenceState()).find((k) => {
+        const presences = presenceChannel!.presenceState()[k]!
+        return presences.some((p: any) => p.user_id === payload?.payload?.user_id)
+      })
+      // We deliberately do NOT render remote cursors.
+    })
+    .subscribe(async (status) => {
+      if (status !== 'SUBSCRIBED') return
+      await presenceChannel!.track(myPresence())
+      syncPresence()
+    })
+
+  window.addEventListener('mousemove', onMouseMove)
+  startActivityLoop()
+
+  onUnmounted(() => {
+    window.removeEventListener('mousemove', onMouseMove)
+    if (presenceChannel) {
+      void supabase.removeChannel(presenceChannel)
+      presenceChannel = null
+    }
+    users.value = new Map()
+    if (mouseFrame) cancelAnimationFrame(mouseFrame)
+    mouseFrame = null
+  })
+}
+
+function syncPresence() {
+  if (!presenceChannel) return
+  const state = presenceChannel.presenceState()
+  const now = Date.now()
+  const map = new Map<string, PresenceUser>()
+  for (const [key, presences] of Object.entries(state)) {
+    for (const p of presences as any[]) {
+      const u: PresenceUser = {
+        id: p.user_id || key,
+        name: p.name || 'Unknown',
+        email: p.email || '',
+        avatar: p.avatar || '',
+        activity: p.activity || 'idle',
+        target: p.target || 'page',
+        x: p.x ?? 0,
+        y: p.y ?? 0,
+        updatedAt: p.updatedAt ?? now,
+      }
+      map.set(key, u)
+
+      // Only toast when another user's activity changes TO non-idle.
+      if (key !== myKey && u.activity !== 'idle') {
+        const prev = prevActivities.value.get(key)
+        if (prev !== u.activity) {
+          void toast.push(`${u.name} is ${ACTIVITY_LABELS[u.activity]} on ${u.target}`, 'info', 3000)
+        }
+      }
+      prevActivities.value.set(key, u.activity)
+    }
+  }
+  // Clean up activities for users who left.
+  for (const key of prevActivities.value.keys()) {
+    if (!map.has(key)) prevActivities.value.delete(key)
+  }
+  users.value = map
+}
+
+export function stopPresence() {
+  if (presenceChannel && import.meta.client) {
+    const supabase = useSupabase()
+    void supabase.removeChannel(presenceChannel)
+    presenceChannel = null
+  }
+  users.value = new Map()
+  prevActivities.value = new Map()
 }
 
 export function usePresence() {
   return {
     users: readonly(users),
-    me: readonly(me),
-    onlineCount: computed(() => users.value.length),
-    activeUsers: computed(() => users.value.filter((u) => u.activity !== 'idle')),
+    onlineCount: computed(() => users.value.size),
+    me: computed(() => (myKey ? users.value.get(myKey) ?? null : null)),
+    activeUsers: computed(() => [...users.value.values()].filter((u) => u.activity !== 'idle')),
     initPresence,
-    stop,
-    toastPush: (text: string) => void toast.push(text, 'info', 3000),
+    stopPresence,
   }
 }
