@@ -12,6 +12,8 @@ const phase = shallowRef<AuthPhase>('boot')
 const manager = shallowRef<ManagerUser | null>(null)
 const authError = shallowRef<string | null>(null)
 
+export { session, manager }
+
 let initialized = false
 
 /**

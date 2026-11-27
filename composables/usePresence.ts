@@ -13,7 +13,7 @@
 
 import { ref, computed, readonly, onUnmounted } from 'vue'
 import { useSupabase } from '~/lib/supabase'
-import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
+import { session, manager } from '~/composables/useSupabaseAuth'
 import { useToast } from '~/composables/useToast'
 import { isMock } from '~/lib/mock'
 
@@ -47,7 +47,6 @@ let lastMouseX = 0
 let lastMouseY = 0
 
 const toast = useToast()
-const { manager, session } = useSupabaseAuth()
 
 function myId(): string | null {
   return session.value?.user.id || null
