@@ -22,8 +22,12 @@ import type {
 } from '~/lib/types'
 import { parseIsoDay } from '~/lib/calendar'
 
+let _mock: boolean | null = null
+
 export function isMock(): boolean {
-  return Boolean((useRuntimeConfig().public as Record<string, unknown>).mock)
+  if (_mock !== null) return _mock
+  _mock = Boolean((useRuntimeConfig().public as Record<string, unknown>).mock)
+  return _mock
 }
 
 export const MOCK_MANAGER: ManagerUser = {
