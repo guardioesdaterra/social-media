@@ -40,7 +40,7 @@
 import { computed, onMounted } from 'vue'
 import { MANAGER_DOMAIN } from '~/lib/constants'
 
-const { phase, authError, signOut, signInWithGoogle, session } = useSupabaseAuth()
+const { phase, authError, signOut, signInWithGoogle, session, bootstrap } = useSupabaseAuth()
 const router = useRouter()
 const toast = useToast()
 
@@ -56,7 +56,6 @@ const isEmbedded = computed(() => {
 })
 
 onMounted(async () => {
-  const { bootstrap } = useSupabaseAuth()
   await bootstrap()
 })
 

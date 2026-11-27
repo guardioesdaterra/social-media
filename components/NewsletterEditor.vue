@@ -69,6 +69,7 @@
 import type { Newsletter, NewsletterDraft } from '~/lib/types'
 import { computed, reactive, ref, watch } from 'vue'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
+import { useToast } from '~/composables/useToast'
 import type { NewsletterForm } from './newsletter-editor/types'
 import DetailsSection from './newsletter-editor/DetailsSection.vue'
 import BodySection from './newsletter-editor/BodySection.vue'
@@ -88,6 +89,7 @@ const emit = defineEmits<{
 
 const { phase } = useSupabaseAuth()
 const canEdit = computed(() => phase.value === 'manager')
+const toast = useToast()
 
 const form = reactive<NewsletterForm>({
   id: '',
@@ -133,7 +135,7 @@ function resetForm() {
 
 async function handleSubmit() {
   if (!form.title || !form.subject || !form.body) {
-    alert('Title, subject and body are required.')
+    toast.error('Title, subject and body are required.')
     return
   }
 

@@ -118,6 +118,7 @@
                     type="button"
                     class="eg-icon-btn shrink-0 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
                     aria-label="Approve post"
+                    title="Approve"
                     :disabled="post.status === 'approved'"
                     @click="emit('approve', post)"
                   >
@@ -129,6 +130,7 @@
                     type="button"
                     class="eg-icon-btn shrink-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
                     aria-label="Decline post"
+                    title="Return to planned"
                     :disabled="post.status === 'planned'"
                     @click="emit('decline', post)"
                   >
@@ -140,6 +142,7 @@
                     type="button"
                     class="eg-icon-btn shrink-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                     aria-label="Add comment"
+                    title="Comment"
                     @click="emit('comment', post)"
                   >
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">

@@ -99,6 +99,15 @@
             Topics
           </button>
 
+          <button
+            class="eg-btn-glass-red !px-2.5 !py-1.5 text-xs shrink-0"
+            :class="{ 'bg-white/10': pendingPostsOpen }"
+            @click="pendingPostsOpen = true"
+            aria-label="Open pending posts review panel"
+          >
+            Review {{ pendingPosts.length }}
+          </button>
+
           <CreateMenu :day="cursor" @create="onCreate" />
         </div>
       </header>
@@ -745,37 +754,47 @@ async function deleteSiteUpdate(id: string) {
   }
 }
 
-/** Atomic approve/decline commands for pending posts (undo/redo safe). */
-function approvePost(post: CalendarPost) {
+/** Atomic approve/decline commands for pending posts (undo/redo safe).
+ *  The save is awaited first; the command is only pushed to history on success,
+ *  so a failed server write never enters the undo stack. */
+async function approvePost(post: CalendarPost) {
   if (post.status === 'approved') return
   const prev = post.status
   const next = 'approved' as const
   const draft = { ...post, status: next } as PostDraft
-  history.run({
-    id: `approve_${post.id}`,
-    label: `Approve "${post.title || post.id}"`,
-    execute: () => void calendar.save({ action: 'upsert_post', post: draft }),
-    undo: () =>
-      void calendar.save({ action: 'upsert_post', post: { ...post, status: prev } as PostDraft }),
-    redo: () => void calendar.save({ action: 'upsert_post', post: draft }),
-  })
-  toast.success(`Approved "${post.title || post.id}".`)
+  try {
+    await calendar.save({ action: 'upsert_post', post: draft })
+    history.run({
+      id: `approve_${post.id}`,
+      label: `Approve "${post.title || post.id}"`,
+      execute: () => void calendar.save({ action: 'upsert_post', post: draft }),
+      undo: () => void calendar.save({ action: 'upsert_post', post: { ...post, status: prev } as PostDraft }),
+      redo: () => void calendar.save({ action: 'upsert_post', post: draft }),
+    })
+    toast.success(`Approved "${post.title || post.id}".`)
+  } catch (err: any) {
+    toast.error(err?.message || `Could not approve "${post.title || post.id}".`)
+  }
 }
 
-function declinePost(post: CalendarPost) {
+async function declinePost(post: CalendarPost) {
   if (post.status === 'planned') return
   const prev = post.status
   const next = 'planned' as const
   const draft = { ...post, status: next } as PostDraft
-  history.run({
-    id: `decline_${post.id}`,
-    label: `Return to planned "${post.title || post.id}"`,
-    execute: () => void calendar.save({ action: 'upsert_post', post: draft }),
-    undo: () =>
-      void calendar.save({ action: 'upsert_post', post: { ...post, status: prev } as PostDraft }),
-    redo: () => void calendar.save({ action: 'upsert_post', post: draft }),
-  })
-  toast.info(`Returned "${post.title || post.id}" to planned.`)
+  try {
+    await calendar.save({ action: 'upsert_post', post: draft })
+    history.run({
+      id: `decline_${post.id}`,
+      label: `Return to planned "${post.title || post.id}"`,
+      execute: () => void calendar.save({ action: 'upsert_post', post: draft }),
+      undo: () => void calendar.save({ action: 'upsert_post', post: { ...post, status: prev } as PostDraft }),
+      redo: () => void calendar.save({ action: 'upsert_post', post: draft }),
+    })
+    toast.info(`Returned "${post.title || post.id}" to planned.`)
+  } catch (err: any) {
+    toast.error(err?.message || `Could not return "${post.title || post.id}" to planned.`)
+  }
 }
 
 function commentOnPost(post: CalendarPost) {

@@ -41,7 +41,7 @@
       </div>
 
       <div v-if="mediaSource === 'local'" class="mt-2 space-y-3">
-        <label class="eg-dropzone" @click.prevent>
+        <label class="eg-dropzone">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500">
             <rect x="3" y="3" width="18" height="18" rx="3" />
             <circle cx="9" cy="9" r="1.6" />
@@ -113,3 +113,4 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ 'update:mediaSource': [source: MediaSource] }>()
+</script>
