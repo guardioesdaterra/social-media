@@ -2,13 +2,11 @@
   <Transition name="modal">
     <div v-if="open" class="fixed inset-0 z-50">
       <div class="absolute inset-0 bg-black/55 backdrop-blur-2xl" aria-hidden="true" @click="close" />
-      
+
       <div class="eg-sheet absolute inset-0 flex flex-col overflow-hidden sm:inset-4 lg:inset-8">
         <header class="eg-sheet-header">
           <div class="min-w-0">
-            <h2 class="text-[15px] font-semibold tracking-tight text-white">
-              {{ post ? 'Edit post' : 'New post' }}
-            </h2>
+            <h2 class="text-[15px] font-semibold tracking-tight text-white">{{ post ? 'Edit post' : 'New post' }}</h2>
             <p class="mt-0.5 truncate text-xs text-zinc-500">
               {{ post ? 'Update the scheduled social post' : 'Schedule a new social post' }}
             </p>
@@ -18,144 +16,68 @@
           </button>
         </header>
 
-        <div class="flex flex-1 overflow-hidden">
-          <form id="post-editor-form" @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto">
-            <div class="mx-auto w-full max-w-2xl space-y-5 px-4 py-6 sm:px-6">
-              <section class="eg-section">
-                <h3 class="eg-section-title">Schedule</h3>
-                <p class="eg-section-sub">When this post should go live.</p>
-                <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label class="eg-field-label" for="post-date">Date <span class="req">*</span></label>
-                    <input id="post-date" type="date" class="eg-field [color-scheme:dark]" :value="form.day" @input="form.day = ($event.target as HTMLInputElement).value" required />
-                  </div>
-                  <div>
-                    <label class="eg-field-label" for="post-time">Scheduled time</label>
-                    <input id="post-time" type="time" class="eg-field [color-scheme:dark]" :value="form.scheduled_at ?? ''" @input="form.scheduled_at = ($event.target as HTMLInputElement).value || null" />
-                    <p class="eg-hint">Leave blank for an all-day post.</p>
-                  </div>
-                </div>
-              </section>
-
-              <section class="eg-section">
-                <h3 class="eg-section-title">Classification</h3>
-                <p class="eg-section-sub">Topic, format and workflow status.</p>
-                <div class="mt-4 space-y-4">
-                  <div>
-                    <label class="eg-field-label" for="post-topic">Topic <span class="req">*</span></label>
-                    <select id="post-topic" class="eg-select" :value="form.topic_key" @change="form.topic_key = ($event.target as HTMLSelectElement).value" required>
-                      <option disabled value="">Select a topic</option>
-                      <option v-for="t in topics" :key="t.key" :value="t.key">{{ t.emoji }} {{ t.label }}</option>
-                    </select>
-                  </div>
-                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <label class="eg-field-label" for="post-format">Format</label>
-                      <select id="post-format" class="eg-select" v-model="form.format"><option v-for="f in FORMATS" :key="f" :value="f">{{ f }}</option></select>
-                    </div>
-                    <div>
-                      <label class="eg-field-label" for="post-status">Status</label>
-                      <select id="post-status" class="eg-select" v-model="form.status"><option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option></select>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section class="eg-section">
-                <h3 class="eg-section-title">Content</h3>
-                <p class="eg-section-sub">What your audience will see.</p>
-                <div class="mt-4 space-y-4">
-                  <div>
-                    <label class="eg-field-label" for="post-title">Title</label>
-                    <input id="post-title" type="text" class="eg-field" :value="form.title" @input="form.title = ($event.target as HTMLInputElement).value" maxlength="300" placeholder="e.g. Giving Tuesday — matched donation" />
-                  </div>
-                  <div>
-                    <div class="flex items-baseline justify-between gap-2">
-                      <label class="eg-field-label" for="post-caption">Caption</label>
-                      <span class="text-[11px] tabular-nums" :class="form.caption.length > 9000 ? 'text-amber-400' : 'text-zinc-600'">{{ form.caption.length }} / 10000</span>
-                    </div>
-                    <textarea id="post-caption" class="eg-textarea" rows="5" :value="form.caption" @input="form.caption = ($event.target as HTMLTextAreaElement).value" maxlength="10000" placeholder="Greetings EG Family! ..."></textarea>
-                  </div>
-                  <div>
-                    <label class="eg-field-label" for="post-tags">Hashtags</label>
-                    <input id="post-tags" type="text" class="eg-field" :value="form.hashtags" @input="form.hashtags = ($event.target as HTMLInputElement).value" placeholder="#EarthGuardians #ClimateAction" />
-                    <p class="eg-hint">Space-separated.</p>
-                  </div>
-                </div>
-              </section>
-
-              <section class="eg-section">
-                <h3 class="eg-section-title">Media</h3>
-                <p class="eg-section-sub">Full quality image or video, stored in Postgres.</p>
-                <div class="mt-4 space-y-3">
-                  <div class="eg-segmented mt-2" role="tablist" aria-label="Media source">
-                    <button type="button" role="tab" :aria-selected="mediaSource === 'local'" :class="['eg-segmented-item', mediaSource === 'local' ? 'is-active' : '']" @click="mediaSource = 'local'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Local Upload</button>
-                    <button type="button" role="tab" :aria-selected="mediaSource === 'gdrive'" :class="['eg-segmented-item', mediaSource === 'gdrive' ? 'is-active' : '']" @click="openGoogleDrivePicker"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="mr-1.5"><path d="M19.5 9c0-2.48-2.02-4.5-4.5-4.5S10.5 6.52 10.5 9"/><path d="M12 16.5c-2.48 0-4.5-2.02-4.5-4.5S9.5 7.5 12 7.5s4.5 2.02 4.5 4.5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M21 15h-2.5a1.5 1.5 0 0 1-1.5-1.5V12a1.5 1.5 0 0 0-1.5-1.5H12"/></svg>Google Drive</button>
-                  </div>
-
-                  <div v-if="mediaSource === 'local'" class="mt-2 space-y-3">
-                    <label class="eg-dropzone"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="1.6" /><path d="m21 15-4.2-4.2a2 2 0 0 0-2.8 0L4 21" /></svg><span class="text-sm font-medium text-zinc-300">Click to choose an image or video</span><span class="text-[11px] text-zinc-500">PNG, JPG or WebP (max 4 MB) · MP4 or MOV (max 100 MB) · replaces any existing media</span><input type="file" accept="image/*,video/*" class="sr-only" @change="onMedia" /></label>
-                  </div>
-
-                  <div v-else class="mt-2">
-                    <div class="flex items-start gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-3.5">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="mt-0.5 flex-shrink-0 text-emerald-400"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-white">Pick from Google Drive</p>
-                        <p class="mt-0.5 text-xs text-zinc-400">Choose one file, several files — or a whole folder (every image and video inside it) when the format is Carousel.</p>
-                      </div>
-                    </div>
-                    <button type="button" class="eg-btn-apple-secondary mt-3 w-full" @click="openGoogleDrivePicker"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" aria-hidden="true"><path d="M21 15V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v10"/><path d="M3 15v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V15"/></svg>Open Google Drive</button>
-                    <p class="eg-hint">Files are downloaded from your Drive and stored with the post.</p>
-                  </div>
-
-                  <div v-if="mediaPreview" class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                    <template v-if="mediaKind === 'video'"><video :src="mediaPreview" alt="" class="h-16 w-24 shrink-0 rounded-lg object-cover ring-1 ring-white/10" muted playsinline /></template>
-                    <template v-else><img :src="mediaPreview" alt="" class="h-16 w-24 shrink-0 rounded-lg object-cover ring-1 ring-white/10" /></template>
-                    <div class="min-w-0 flex-1">
-                      <div class="flex items-center gap-2">
-                        <p class="truncate text-xs font-medium text-zinc-200" :title="mediaName || undefined">{{ mediaName || `Current ${mediaKind}` }}</p>
-                        <span v-if="mediaOrigin" class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide" :class="mediaOrigin === 'gdrive' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-zinc-400'">{{ mediaOrigin === 'gdrive' ? 'Google Drive' : 'Upload' }}</span>
-                      </div>
-                      <p class="mt-0.5 text-[11px] text-zinc-500">{{ mediaKind === 'video' ? 'Video' : 'Image' }} · {{ formatBytes(mediaBytes) }}</p>
-                    </div>
-                    <button type="button" class="eg-btn-apple-secondary rounded-lg px-3 py-1.5 text-xs" @click="downloadMedia">⤓ Download</button>
-                    <button type="button" class="eg-icon-btn text-red-400" aria-label="Remove media" @click="clearMedia"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
-                  </div>
-                </div>
-              </section>
+        <!-- Form (left / mobile-first stacked) — Preview (right / desktop side-by-side) -->
+        <div ref="paneContainer" class="relative flex flex-col h-full min-w-0 lg:flex-row" :style="dividerStyle">
+          <form id="post-editor-form" @submit.prevent="handleSubmit" class="flex-1 min-w-0 overflow-y-auto" :class="{ 'lg:w-full': !previewOpen }">
+            <div class="mx-auto w-full max-w-xl space-y-6 px-4 py-6 sm:px-6 lg:max-w-none lg:px-0 lg:py-0">
+              <ScheduleSection :form="form" />
+              <ClassificationSection :form="form" :topics="topics" />
+              <ContentSection :form="form" />
+              <MediaSection
+                :form="form"
+                :media-source="mediaSource"
+                :media="media"
+                :on-media="onMedia"
+                :on-clear-media="clearMedia"
+                :on-download-media="downloadMedia"
+                :open-gdrive="openGoogleDrivePicker"
+                @update:media-source="mediaSource = $event"
+              />
+              <div v-if="!previewOpen" class="mt-4 flex justify-center">
+                <button type="button" class="eg-btn-apple-secondary text-xs" @click="previewOpen = true">Show preview</button>
+              </div>
             </div>
           </form>
 
-          <div class="hidden lg:flex w-1/2 min-w-[400px] max-w-[540px] border-l border-white/10 bg-[#0a0a0a] flex-col">
-            <div class="shrink-0 border-b border-white/10 px-6 py-4">
-              <div class="flex items-center justify-between"><h3 class="text-[13px] font-semibold text-white">Preview</h3><div class="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-1.5"><span class="text-[11px] text-zinc-400">Format:</span><span class="text-xs font-medium text-white">{{ form.format }}</span></div></div>
-            </div>
-            <div class="flex-1 overflow-y-auto p-6">
-              <div class="mx-auto max-w-[350px] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl">
-                <div class="flex items-center gap-3 px-3 py-3"><div class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 text-sm font-bold text-black">{{ selectedTopic?.emoji || '📷' }}</div><div class="flex-1 min-w-0"><p class="truncate text-[13px] font-semibold text-white">{{ selectedTopic?.label || 'earthguardians' }}</p><p class="truncate text-[11px] text-zinc-500">{{ form.scheduled_at ? `${form.day} at ${form.scheduled_at}` : form.day }}</p></div><button type="button" class="text-zinc-400 hover:text-white transition"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="12" r="2"/></svg></button></div>
-                <div class="relative aspect-square bg-zinc-900">
-                  <template v-if="mediaPreview"><template v-if="mediaKind === 'video'"><video :src="mediaPreview" alt="Post media" class="h-full w-full object-cover" muted playsinline /></template><template v-else><img :src="mediaPreview" alt="Post media" class="h-full w-full object-cover" /></template><div v-if="form.format === 'Reel' || form.format === 'Video'" class="absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 backdrop-blur-sm"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg><span class="text-[10px] font-medium text-white">{{ form.format }}</span></div><div v-if="form.format === 'Carousel'" class="absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 backdrop-blur-sm"><span class="text-[10px] font-medium text-white">1/3</span></div></template><template v-else><div class="flex h-full flex-col items-center justify-center gap-3 text-zinc-600"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="m21 15-4.2-4.2a2 2 0 0 0-2.8 0L4 21"/></svg><span class="text-xs">No image selected</span></div></template>
-                </div>
-                <div class="flex items-center justify-between px-3 py-3"><div class="flex items-center gap-4"><button type="button" class="text-zinc-400 hover:text-white transition"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button><button type="button" class="text-zinc-400 hover:text-white transition"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button><button type="button" class="text-zinc-400 hover:text-white transition"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div><button type="button" class="text-zinc-400 hover:text-white transition"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button></div>
-                <div class="px-3 pb-1"><p class="text-[13px] font-semibold text-white">1,234 likes</p></div>
-                <div class="px-3 py-2"><p class="text-[13px] text-white"><span class="font-semibold">{{ selectedTopic?.label || 'earthguardians' }}</span><span class="ml-1">{{ previewCaption }}</span></p></div>
-                <div v-if="form.hashtags" class="px-3 pb-3"><p class="text-[13px] text-blue-400">{{ formattedHashtags }}</p></div>
-                <div class="px-3 pb-3"><button type="button" class="text-[13px] text-zinc-500 hover:text-zinc-300 transition">View all comments</button></div>
-                <div class="border-t border-white/10 px-3 py-2"><p class="text-[10px] uppercase tracking-wider text-zinc-500">{{ formatPreviewDate(form.day) }}</p></div>
-              </div>
-              <div v-if="form.format === 'Story'" class="mt-6"><h4 class="mb-3 text-center text-xs font-medium text-zinc-500 uppercase tracking-wider">Story Preview</h4><div class="mx-auto aspect-[9/16] max-w-[250px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl"><template v-if="mediaPreview"><template v-if="mediaKind === 'video'"><video :src="mediaPreview" alt="Story media" class="h-full w-full object-cover" muted playsinline /></template><template v-else><img :src="mediaPreview" alt="Story media" class="h-full w-full object-cover" /></template><div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4"><p class="text-sm font-medium text-white truncate">{{ form.title || selectedTopic?.label }}</p></div></template><template v-else><div class="flex h-full flex-col items-center justify-center gap-2 text-zinc-600"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg><span class="text-xs">Story content</span></div></template></div></div>
-            </div>
-            <div class="shrink-0 border-t border-white/10 bg-white/[0.02] px-6 py-3"><p class="text-[11px] text-zinc-500"><span class="text-zinc-400">Tip:</span> This is a preview. Actual appearance may vary by platform.</p></div>
-          </div>
+          <div
+            v-if="previewOpen"
+            class="divider hidden lg:block absolute inset-y-0 left-full -translate-x-1/2 w-1.5 cursor-col-resize select-none"
+            :class="{ 'w-5 bg-emerald-500 shadow-[0_0_16px_rgba(34,197,94,0.35)]': resizing }"
+            @mousedown="startResize"
+          />
+
+          <PostPreview
+            v-if="previewOpen"
+            class="flex-1 min-w-0 overflow-y-auto"
+            :form="form"
+            :selected-topic="selectedTopic"
+            :preview-caption="previewCaption"
+            :formatted-hashtags="formattedHashtags"
+            :media="media"
+            :format-preview-date="formatPreviewDate"
+            @hide-preview="previewOpen = false"
+          />
         </div>
 
-        <footer class="eg-sheet-footer"><button type="button" class="eg-btn-apple-secondary" @click="close">Cancel</button><button type="submit" form="post-editor-form" class="eg-btn-apple-primary" :disabled="saving"><span v-if="saving" class="flex items-center gap-2"><span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/30 border-t-black" />Saving…</span><span v-else>{{ post ? 'Save changes' : 'Create post' }}</span></button></footer>
+        <footer class="eg-sheet-footer">
+          <button type="button" class="eg-btn-apple-secondary" @click="close">Cancel</button>
+          <button type="submit" form="post-editor-form" class="eg-btn-apple-primary" :disabled="saving">
+            <span v-if="saving" class="flex items-center gap-2"><span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/30 border-t-black" />Saving…</span>
+            <span v-else>{{ post ? 'Save changes' : 'Create post' }}</span>
+          </button>
+        </footer>
       </div>
     </div>
-  </Transition>
 
-  <GoogleDrivePicker :open="gdrivePickerOpen" @select="onGoogleDriveSelect" @cancel="onGoogleDriveCancel" @update:open="gdrivePickerOpen = $event" @update:selectionMode="gdriveSelectionMode = $event" :selection-mode="gdriveSelectionMode" />
+    <GoogleDrivePicker
+      :open="gdrivePickerOpen"
+      @select="onGoogleDriveSelect"
+      @cancel="onGoogleDriveCancel"
+      @update:open="gdrivePickerOpen = $event"
+      @update:selectionMode="gdriveSelectionMode = $event"
+      :selection-mode="gdriveSelectionMode"
+    />
+  </Transition>
 </template>
 
 <script setup lang="ts">
@@ -166,14 +88,19 @@ import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from '~/lib/constants'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
 import { useToast } from '~/composables/useToast'
 import { computed, reactive, ref, watch } from 'vue'
+import type { MediaState, MediaSource, PostForm } from './post-editor/types'
 import GoogleDrivePicker from '~/components/GoogleDrivePicker.vue'
+import ScheduleSection from './post-editor/ScheduleSection.vue'
+import ClassificationSection from './post-editor/ClassificationSection.vue'
+import ContentSection from './post-editor/ContentSection.vue'
+import MediaSection from './post-editor/MediaSection.vue'
+import PostPreview from './post-editor/PostPreview.vue'
 
 const props = defineProps<{ open: boolean; post: CalendarPost | null; topics: readonly Topic[]; day: string }>()
 const emit = defineEmits<{ save: [draft: any]; delete: [id: string]; cancel: []; 'update:open': [open: boolean] }>()
 
 const { phase } = useSupabaseAuth()
 const toast = useToast()
-const canEdit = computed(() => phase.value === 'manager')
 
 const selectedTopic = computed(() => props.topics.find(t => t.key === form.topic_key) || null)
 const previewCaption = computed(() => { const c = form.caption || 'Your caption here...'; return c.length > 80 ? c.slice(0, 80) + '...' : c })
@@ -181,27 +108,85 @@ const formattedHashtags = computed(() => { if (!form.hashtags) return ''; return
 
 function formatPreviewDate(day: string): string { if (!day) return ''; const d = new Date(day + 'T00:00:00'), n = new Date(), diff = d.getTime() - n.getTime(), days = Math.ceil(diff / 86400000); if (days === 0) return 'Just now'; if (days === 1) return 'Tomorrow'; if (days === -1) return 'Yesterday'; if (days > 1 && days < 7) return `${days} days ago`; return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
 
-const form = reactive<{ id: string; day: string; scheduled_at: string | null; topic_key: string; format: PostFormat; status: PostStatus; title: string; caption: string; hashtags: string; image_base64: string | null; video_base64: string | null }>({ id: '', day: '', scheduled_at: null, topic_key: '', format: 'Carousel', status: 'planned', title: '', caption: '', hashtags: '', image_base64: null, video_base64: null })
+const form = reactive<PostForm>({ id: '', day: '', scheduled_at: null, topic_key: '', format: 'Carousel', status: 'planned', title: '', caption: '', hashtags: '', image_base64: null, video_base64: null })
 const saving = ref(false)
-const mediaPreview = ref<string | null>(null)
-const mediaKind = ref<'image' | 'video' | null>(null)
-const mediaBytes = ref(0)
-const mediaName = ref('')
-const mediaOrigin = ref<'local' | 'gdrive' | null>(null)
-const mediaSource = ref<'local' | 'gdrive'>('local')
+const media = reactive<MediaState>({ preview: null, kind: null, bytes: 0, name: '', origin: null })
+const mediaSource = ref<MediaSource>('local')
 const gdrivePickerOpen = ref(false)
 const gdriveSelectionMode = ref<'single' | 'multiple' | 'folder'>('single')
+
+const paneWidth = ref(58)
+const previewOpen = ref(true)
+const resizing = ref(false)
+const paneContainer = ref<HTMLElement | null>(null)
+
+const dividerStyle = computed(() => ({ '--pane-width': `${paneWidth.value}%` }))
 
 function close() { emit('update:open', false) }
 watch(() => props.open, (open) => { if (open) resetForm() })
 
-function resetForm() { const post = props.post; const baseDay = post ? post.day : props.day; saving.value = false; form.id = post?.id ?? ''; form.day = post ? post.day : baseDay; form.scheduled_at = post?.scheduled_at ?? null; form.topic_key = post?.topic_key ?? ''; form.format = (post?.format ?? 'Carousel') as PostFormat; form.status = (post?.status ?? 'planned') as PostStatus; form.title = post?.title ?? ''; form.caption = post?.caption ?? ''; form.hashtags = post?.hashtags ?? ''; form.image_base64 = post?.image_base64 ?? null; form.video_base64 = post?.video_base64 ?? null; mediaName.value = ''; mediaOrigin.value = null; if (post?.video_base64) { mediaPreview.value = post.video_base64; mediaKind.value = 'video'; mediaBytes.value = post.video_bytes ?? 0 } else if (post?.image_base64) { mediaPreview.value = post.image_base64; mediaKind.value = 'image'; mediaBytes.value = post.image_bytes ?? 0 } else { mediaPreview.value = null; mediaKind.value = null; mediaBytes.value = 0 } mediaSource.value = 'local'; gdrivePickerOpen.value = false }
+function resetForm() {
+  const post = props.post
+  const baseDay = post ? post.day : props.day
+  saving.value = false
+  form.id = post?.id ?? ''
+  form.day = post ? post.day : baseDay
+  form.scheduled_at = post?.scheduled_at ?? null
+  form.topic_key = post?.topic_key ?? ''
+  form.format = (post?.format ?? 'Carousel') as PostFormat
+  form.status = (post?.status ?? 'planned') as PostStatus
+  form.title = post?.title ?? ''
+  form.caption = post?.caption ?? ''
+  form.hashtags = post?.hashtags ?? ''
+  form.image_base64 = post?.image_base64 ?? null
+  form.video_base64 = post?.video_base64 ?? null
+  media.preview = null
+  media.kind = null
+  media.bytes = 0
+  media.name = ''
+  media.origin = null
+  if (post?.video_base64) { media.preview = post.video_base64; media.kind = 'video'; media.bytes = post.video_bytes ?? 0; media.name = post.video_name ?? ''; media.origin = 'gdrive' }
+  else if (post?.image_base64) { media.preview = post.image_base64; media.kind = 'image'; media.bytes = post.image_bytes ?? 0; media.name = post.image_name ?? ''; media.origin = 'gdrive' }
+  mediaSource.value = 'local'
+  gdrivePickerOpen.value = false
+}
 
-async function onMedia(event: Event) { const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file) return; const isVideo = file.type.startsWith('video/'); const isImage = file.type.startsWith('image/'); if (!isVideo && !isImage) { toast.error('Please choose an image or video file.'); input.value = ''; return } const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES; if (file.size > maxBytes) { toast.error(`${isVideo ? 'Video' : 'Image'} too large (${formatBytes(file.size)}). Limit: ${formatBytes(maxBytes)}.`); input.value = ''; return } try { const payload = await fileToDataUrl(file, { kind: isVideo ? 'video' : 'image', maxBytes }); if (isVideo) { form.image_base64 = null; form.video_base64 = payload.base64 } else { form.video_base64 = null; form.image_base64 = payload.base64 } mediaPreview.value = payload.base64; mediaKind.value = payload.kind; mediaBytes.value = payload.bytes; mediaName.value = file.name; mediaOrigin.value = 'local' } catch (err) { toast.error(err instanceof Error ? err.message : 'Could not read the file.') } finally { input.value = '' } }
+async function onMedia(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const isVideo = file.type.startsWith('video/')
+  const isImage = file.type.startsWith('image/')
+  if (!isVideo && !isImage) { toast.error('Please choose an image or video file.'); input.value = ''; return }
+  const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES
+  if (file.size > maxBytes) { toast.error(`${isVideo ? 'Video' : 'Image'} too large (${formatBytes(file.size)}). Limit: ${formatBytes(maxBytes)}.`); input.value = ''; return }
+  try {
+    const payload = await fileToDataUrl(file, { kind: isVideo ? 'video' : 'image', maxBytes })
+    if (isVideo) { form.image_base64 = null; form.video_base64 = payload.base64 } else { form.video_base64 = null; form.image_base64 = payload.base64 }
+    media.preview = payload.base64
+    media.kind = payload.kind
+    media.bytes = payload.bytes
+    media.name = file.name
+    media.origin = 'local'
+  } catch (err) { toast.error(err instanceof Error ? err.message : 'Could not read the file.') } finally { input.value = '' }
+}
 
-function clearMedia() { form.image_base64 = null; form.video_base64 = null; mediaPreview.value = null; mediaKind.value = null; mediaBytes.value = 0; mediaName.value = ''; mediaOrigin.value = null }
+function clearMedia() {
+  form.image_base64 = null
+  form.video_base64 = null
+  media.preview = null
+  media.kind = null
+  media.bytes = 0
+  media.name = ''
+  media.origin = null
+}
 
-async function downloadMedia() { if (!mediaPreview.value) return; const mime = mediaPreview.value.match(/data:(.*?);/)![1] ?? 'application/octet-stream'; const ext = mime.split('/')[1] || (mediaKind.value === 'video' ? 'mp4' : 'jpg'); downloadDataUrl(mediaPreview.value, slugify(`${props.post?.day || 'media'}_${props.post?.topic_key || 'post'}`) + '.' + ext) }
+function downloadMedia() {
+  if (!media.preview) return
+  const mime = media.preview.match(/data:(.*?);/)![1] ?? 'application/octet-stream'
+  const ext = mime.split('/')[1] || (media.kind === 'video' ? 'mp4' : 'jpg')
+  downloadDataUrl(media.preview, slugify(`${props.post?.day || 'media'}_${props.post?.topic_key || 'post'}`) + '.' + ext)
+}
 
 function openGoogleDrivePicker() { gdriveSelectionMode.value = form.format === 'Carousel' ? 'folder' : 'multiple'; mediaSource.value = 'gdrive'; gdrivePickerOpen.value = true }
 
@@ -217,11 +202,11 @@ function onGoogleDriveSelect(mediaFiles: Array<{ id: string; name: string; mimeT
     form.video_base64 = null
     form.image_base64 = firstFile.dataUrl
   }
-  mediaPreview.value = firstFile.dataUrl
-  mediaKind.value = firstFile.kind
-  mediaBytes.value = firstFile.size
-  mediaName.value = firstFile.name
-  mediaOrigin.value = 'gdrive'
+  media.preview = firstFile.dataUrl
+  media.kind = firstFile.kind
+  media.bytes = firstFile.size
+  media.name = firstFile.name
+  media.origin = 'gdrive'
   if (mediaFiles.length > 1) {
     const warning = form.format === 'Carousel'
       ? `Carousel: ${mediaFiles.length} files picked — only one media file per post is supported right now, so “${firstFile.name}” was used.`
@@ -234,13 +219,47 @@ function onGoogleDriveSelect(mediaFiles: Array<{ id: string; name: string; mimeT
   mediaSource.value = 'gdrive'
 }
 
-/** Closing the picker without picking anything: go back to the upload panel (unless Drive media is already attached). */
 function onGoogleDriveCancel() {
   gdrivePickerOpen.value = false
-  if (mediaOrigin.value !== 'gdrive') mediaSource.value = 'local'
+  if (media.origin !== 'gdrive') mediaSource.value = 'local'
 }
 
-async function handleSubmit() { if (!form.topic_key) { toast.error('Please select a topic — every post must be linked to one.'); return } const draft: any = { id: form.id || undefined, day: form.day, scheduled_at: form.scheduled_at || null, topic_key: form.topic_key, format: form.format, status: form.status, title: form.title, caption: form.caption, hashtags: form.hashtags }; if (form.image_base64) { draft.image_base64 = form.image_base64; draft.image_name = 'upload'; draft.image_bytes = mediaKind.value === 'image' ? mediaBytes.value : null } else if (props.post) draft.image_base64 = null; if (form.video_base64) { draft.video_base64 = form.video_base64; draft.video_name = 'upload'; draft.video_bytes = mediaKind.value === 'video' ? mediaBytes.value : null } else if (props.post) draft.video_base64 = null; saving.value = true; emit('save', draft) }
+async function handleSubmit() {
+  if (!form.topic_key) { toast.error('Please select a topic — every post must be linked to one.'); return }
+  const draft: any = { id: form.id || undefined, day: form.day, scheduled_at: form.scheduled_at || null, topic_key: form.topic_key, format: form.format, status: form.status, title: form.title, caption: form.caption, hashtags: form.hashtags }
+  if (form.image_base64) { draft.image_base64 = form.image_base64; draft.image_name = 'upload'; draft.image_bytes = media.kind === 'image' ? media.bytes : null }
+  else if (props.post) draft.image_base64 = null
+  if (form.video_base64) { draft.video_base64 = form.video_base64; draft.video_name = 'upload'; draft.video_bytes = media.kind === 'video' ? media.bytes : null }
+  else if (props.post) draft.video_base64 = null
+  saving.value = true
+  emit('save', draft)
+}
 
 async function handleDelete() { if (!props.post?.id) return; if (window.confirm('Delete this post?')) { emit('delete', props.post.id); close() } }
+
+/* ——— resizable form / preview divider (desktop) ——— */
+
+function startResize(event: MouseEvent) {
+  if (event.button !== 0) return
+  resizing.value = true
+  const startX = event.clientX
+  const startWidth = paneWidth.value
+
+  const onMove = (move: MouseEvent) => {
+    const rect = paneContainer.value?.getBoundingClientRect()
+    const width = rect?.width || 1
+    let pct = startWidth + ((move.clientX - startX) / width) * 100
+    paneWidth.value = Math.min(80, Math.max(20, pct))
+  }
+
+  const onUp = () => {
+    resizing.value = false
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp, { once: true })
+}
+
 </script>

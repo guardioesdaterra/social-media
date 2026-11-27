@@ -7,9 +7,7 @@
         <!-- Header -->
         <header class="eg-sheet-header">
           <div class="min-w-0">
-            <h2 class="text-[15px] font-semibold tracking-tight text-white">
-              {{ newsletter ? 'Edit newsletter' : 'New newsletter' }}
-            </h2>
+            <h2 class="text-[15px] font-semibold tracking-tight text-white">{{ newsletter ? 'Edit newsletter' : 'New newsletter' }}</h2>
             <p class="mt-0.5 truncate text-xs text-zinc-500">
               {{ newsletter ? 'Update this email newsletter' : 'Compose a new email newsletter' }}
             </p>
@@ -19,104 +17,32 @@
           </button>
         </header>
 
-        <!-- Body -->
-        <form id="newsletter-editor-form" @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto">
-          <div class="mx-auto w-full max-w-3xl space-y-5 px-4 py-6 sm:px-6">
-            <!-- Details -->
-            <section class="eg-section">
-              <h3 class="eg-section-title">Details</h3>
-              <p class="eg-section-sub">Subject line and delivery status.</p>
-
-              <div class="mt-4 space-y-4">
-                <div>
-                  <label class="eg-field-label" for="nl-title">Title <span class="req">*</span></label>
-                  <input
-                    id="nl-title"
-                    type="text"
-                    class="eg-field"
-                    :value="form.title"
-                    @input="form.title = ($event.target as HTMLInputElement).value"
-                    maxlength="200"
-                    placeholder="e.g. December 2026 — Year in Review"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label class="eg-field-label" for="nl-subject">Email subject <span class="req">*</span></label>
-                  <input
-                    id="nl-subject"
-                    type="text"
-                    class="eg-field"
-                    :value="form.subject"
-                    @input="form.subject = ($event.target as HTMLInputElement).value"
-                    maxlength="200"
-                    placeholder="e.g. Our year in review + what's next"
-                    required
-                  />
-                </div>
-
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label class="eg-field-label" for="nl-status">Status</label>
-                    <select id="nl-status" class="eg-select" v-model="form.status">
-                      <option value="draft">Draft</option>
-                      <option value="scheduled">Scheduled</option>
-                      <option value="sent">Sent</option>
-                    </select>
-                  </div>
-                  <div v-if="form.status === 'scheduled'">
-                    <label class="eg-field-label" for="nl-scheduled">Scheduled at</label>
-                    <input
-                      id="nl-scheduled"
-                      type="datetime-local"
-                      class="eg-field [color-scheme:dark]"
-                      :value="form.scheduled_at"
-                      @input="form.scheduled_at = ($event.target as HTMLInputElement).value"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label class="eg-field-label" for="nl-recipients">Recipients</label>
-                  <input
-                    id="nl-recipients"
-                    type="text"
-                    class="eg-field"
-                    :value="form.recipient_list"
-                    @input="form.recipient_list = ($event.target as HTMLInputElement).value"
-                    placeholder="newsletter@earthguardians.org, updates@earthguardians.org"
-                  />
-                  <p class="eg-hint">Comma-separated emails. Leave blank to use the default mailing list.</p>
-                </div>
+        <!-- Form (left / mobile-first stacked) — Preview (right / desktop side-by-side) -->
+        <div ref="paneContainer" class="relative flex flex-col h-full min-w-0 lg:flex-row" :style="dividerStyle">
+          <form id="newsletter-editor-form" @submit.prevent="handleSubmit" class="flex-1 min-w-0 overflow-y-auto" :class="{ 'lg:w-full': !previewOpen }">
+            <div class="mx-auto w-full max-w-xl space-y-6 px-4 py-6 sm:px-6 lg:max-w-none lg:px-0 lg:py-0">
+              <DetailsSection :form="form" />
+              <BodySection :form="form" />
+              <div v-if="!previewOpen" class="mt-4 flex justify-center">
+                <button type="button" class="eg-btn-apple-secondary text-xs" @click="previewOpen = true">Show preview</button>
               </div>
-            </section>
+            </div>
+          </form>
 
-            <!-- Body -->
-            <section class="eg-section">
-              <div class="flex items-baseline justify-between gap-2">
-                <div>
-                  <h3 class="eg-section-title">Body</h3>
-                  <p class="eg-section-sub">HTML content of the email.</p>
-                </div>
-                <span class="text-[11px] tabular-nums text-zinc-600">{{ form.body.length }} chars</span>
-              </div>
+          <div
+            v-if="previewOpen"
+            class="divider hidden lg:block absolute inset-y-0 left-full -translate-x-1/2 w-1.5 cursor-col-resize select-none"
+            :class="{ 'w-5 bg-emerald-500 shadow-[0_0_16px_rgba(34,197,94,0.35)]': resizing }"
+            @mousedown="startResize"
+          />
 
-              <div class="mt-4">
-                <textarea
-                  id="nl-body"
-                  aria-label="Body HTML"
-                  class="eg-textarea font-mono text-[13px]"
-                  rows="14"
-                  :value="form.body"
-                  @input="form.body = ($event.target as HTMLTextAreaElement).value"
-                  placeholder="<p>Greetings EG Family!</p>..."
-                  required
-                ></textarea>
-              </div>
-            </section>
-          </div>
-        </form>
+          <NewsletterPreview
+            v-if="previewOpen"
+            class="flex-1 min-w-0 overflow-y-auto"
+            :form="form"
+            @hide-preview="previewOpen = false"
+          />
+        </div>
 
         <!-- Footer -->
         <footer class="eg-sheet-footer">
@@ -143,6 +69,10 @@
 import type { Newsletter, NewsletterDraft } from '~/lib/types'
 import { computed, reactive, ref, watch } from 'vue'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
+import type { NewsletterForm } from './newsletter-editor/types'
+import DetailsSection from './newsletter-editor/DetailsSection.vue'
+import BodySection from './newsletter-editor/BodySection.vue'
+import NewsletterPreview from './newsletter-editor/NewsletterPreview.vue'
 
 const props = defineProps<{
   open: boolean
@@ -159,7 +89,7 @@ const emit = defineEmits<{
 const { phase } = useSupabaseAuth()
 const canEdit = computed(() => phase.value === 'manager')
 
-const form = reactive<NewsletterDraft & { scheduled_at: string }>({
+const form = reactive<NewsletterForm>({
   id: '',
   title: '',
   subject: '',
@@ -171,6 +101,12 @@ const form = reactive<NewsletterDraft & { scheduled_at: string }>({
 })
 
 const saving = ref(false)
+const previewOpen = ref(true)
+const resizing = ref(false)
+const paneContainer = ref<HTMLElement | null>(null)
+const paneWidth = ref(58)
+
+const dividerStyle = computed(() => ({ '--pane-width': `${paneWidth.value}%` }))
 
 function close() {
   emit('update:open', false)
@@ -224,5 +160,30 @@ async function handleDelete() {
     emit('delete', props.newsletter.id)
     close()
   }
+}
+
+/* ——— resizable form / preview divider (desktop) ——— */
+
+function startResize(event: MouseEvent) {
+  if (event.button !== 0) return
+  resizing.value = true
+  const startX = event.clientX
+  const startWidth = paneWidth.value
+
+  const onMove = (move: MouseEvent) => {
+    const rect = paneContainer.value?.getBoundingClientRect()
+    const width = rect?.width || 1
+    let pct = startWidth + ((move.clientX - startX) / width) * 100
+    paneWidth.value = Math.min(80, Math.max(20, pct))
+  }
+
+  const onUp = () => {
+    resizing.value = false
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp, { once: true })
 }
 </script>

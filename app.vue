@@ -5,13 +5,25 @@
     </NuxtLayout>
     <ContextMenuHost />
     <ToastHost />
-    <!-- Exit-intent social CTA popup — suppressed when a staff session is active -->
-    <ExitIntentPopup :disabled="isManager" />
+    <OnlineNow />
+    <PresenceCursor />
+    <CommentaryDrawer />
   </div>
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
+import { usePresence } from '~/composables/usePresence'
+
 useHead({ htmlAttrs: { lang: 'pt-BR' } })
 
-const { phase, isManager } = useSupabaseAuth()
+const { initPresence, stop } = usePresence()
+
+onMounted(() => {
+  initPresence()
+})
+
+onUnmounted(() => {
+  stop()
+})
 </script>

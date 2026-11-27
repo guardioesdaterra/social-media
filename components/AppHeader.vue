@@ -9,7 +9,7 @@
         <img
           src="/EG-Logo.webp"
           alt="EG"
-          class="h-7 w-7 shrink-0 object-contain"
+          class="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 shrink-0 object-contain"
           aria-hidden="true"
         />
       </NuxtLink>

@@ -7,9 +7,7 @@
         <!-- Header -->
         <header class="eg-sheet-header">
           <div class="min-w-0">
-            <h2 class="text-[15px] font-semibold tracking-tight text-white">
-              {{ siteUpdate ? 'Edit site update' : 'New site update' }}
-            </h2>
+            <h2 class="text-[15px] font-semibold tracking-tight text-white">{{ siteUpdate ? 'Edit site update' : 'New site update' }}</h2>
             <p class="mt-0.5 truncate text-xs text-zinc-500">
               {{ siteUpdate ? 'Update this website page' : 'Publish a new website page' }}
             </p>
@@ -19,182 +17,33 @@
           </button>
         </header>
 
-        <!-- Body -->
-        <form id="siteupdate-editor-form" @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto">
-          <div class="mx-auto w-full max-w-3xl space-y-5 px-4 py-6 sm:px-6">
-            <!-- Details -->
-            <section class="eg-section">
-              <h3 class="eg-section-title">Details</h3>
-              <p class="eg-section-sub">Title, slug and publishing status.</p>
-
-              <div class="mt-4 space-y-4">
-                <div>
-                  <label class="eg-field-label" for="su-title">Title <span class="req">*</span></label>
-                  <input
-                    id="su-title"
-                    type="text"
-                    class="eg-field"
-                    :value="form.title"
-                    @input="form.title = ($event.target as HTMLInputElement).value"
-                    maxlength="200"
-                    placeholder="e.g. New restoration dashboard launched"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label class="eg-field-label" for="su-slug">URL slug <span class="req">*</span></label>
-                  <input
-                    id="su-slug"
-                    type="text"
-                    class="eg-field"
-                    :value="form.slug"
-                    @input="form.slug = ($event.target as HTMLInputElement).value"
-                    maxlength="200"
-                    placeholder="e.g. restoration-dashboard"
-                    required
-                  />
-                  <p class="eg-hint">Lowercase, digits and hyphens only.</p>
-                </div>
-
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label class="eg-field-label" for="su-status">Status</label>
-                    <select id="su-status" class="eg-select" v-model="form.status">
-                      <option value="draft">Draft</option>
-                      <option value="published">Published</option>
-                      <option value="archived">Archived</option>
-                    </select>
-                  </div>
-                  <div v-if="form.status === 'published'">
-                    <label class="eg-field-label" for="su-published">Published at</label>
-                    <input
-                      id="su-published"
-                      type="datetime-local"
-                      class="eg-field [color-scheme:dark]"
-                      :value="form.published_at"
-                      @input="form.published_at = ($event.target as HTMLInputElement).value"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label class="eg-field-label" for="su-url">Page URL</label>
-                  <input
-                    id="su-url"
-                    type="url"
-                    class="eg-field"
-                    :value="form.url"
-                    @input="form.url = ($event.target as HTMLInputElement).value"
-                    placeholder="https://earthguardians.org/restoration-dashboard"
-                  />
-                </div>
+        <!-- Form (left / mobile-first stacked) — Preview (right / desktop side-by-side) -->
+        <div ref="paneContainer" class="relative flex flex-col h-full min-w-0 lg:flex-row" :style="dividerStyle">
+          <form id="siteupdate-editor-form" @submit.prevent="handleSubmit" class="flex-1 min-w-0 overflow-y-auto" :class="{ 'lg:w-full': !previewOpen }">
+            <div class="mx-auto w-full max-w-xl space-y-6 px-4 py-6 sm:px-6 lg:max-w-none lg:px-0 lg:py-0">
+              <DetailsSection :form="form" />
+              <ContentSection :form="form" />
+              <WaybackSection :form="form" />
+              <div v-if="!previewOpen" class="mt-4 flex justify-center">
+                <button type="button" class="eg-btn-apple-secondary text-xs" @click="previewOpen = true">Show preview</button>
               </div>
-            </section>
+            </div>
+          </form>
 
-            <!-- Content -->
-            <section class="eg-section">
-              <div class="flex items-baseline justify-between gap-2">
-                <div>
-                  <h3 class="eg-section-title">Content</h3>
-                  <p class="eg-section-sub">HTML markup of the page.</p>
-                </div>
-                <span class="text-[11px] tabular-nums text-zinc-600">{{ form.content.length }} chars</span>
-              </div>
+          <div
+            v-if="previewOpen"
+            class="divider hidden lg:block absolute inset-y-0 left-full -translate-x-1/2 w-1.5 cursor-col-resize select-none"
+            :class="{ 'w-5 bg-emerald-500 shadow-[0_0_16px_rgba(34,197,94,0.35)]': resizing }"
+            @mousedown="startResize"
+          />
 
-              <div class="mt-4">
-                <textarea
-                  id="su-content"
-                  aria-label="Content HTML"
-                  class="eg-textarea font-mono text-[13px]"
-                  rows="12"
-                  :value="form.content"
-                  @input="form.content = ($event.target as HTMLTextAreaElement).value"
-                  placeholder="<h1>Welcome</h1><p>...</p>"
-                  required
-                ></textarea>
-              </div>
-            </section>
-
-            <!-- Wayback -->
-            <section class="eg-section">
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 class="eg-section-title">Wayback Machine</h3>
-                  <p class="eg-section-sub">Snapshots and visual diffs from web.archive.org.</p>
-                </div>
-                <div class="eg-segmented" role="tablist" aria-label="Wayback views">
-                  <button
-                    type="button"
-                    role="tab"
-                    class="eg-segmented-item"
-                    :class="{ 'is-active': waybackTab === 'snapshots' }"
-                    :aria-selected="waybackTab === 'snapshots'"
-                    @click="waybackTab = 'snapshots'"
-                  >
-                    📸 Snapshots
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    class="eg-segmented-item"
-                    :class="{ 'is-active': waybackTab === 'diff' }"
-                    :aria-selected="waybackTab === 'diff'"
-                    :disabled="waybackSnapshots.length < 2"
-                    @click="waybackTab = 'diff'"
-                  >
-                    🔄 Compare
-                  </button>
-                </div>
-              </div>
-
-              <!-- Snapshots Tab -->
-              <div v-if="waybackTab === 'snapshots'" class="mt-4">
-                <WaybackPicker
-                  :prefillUrl="form.url || undefined"
-                  @snapshots="onSnapshotsLoaded"
-                  @select="onSelectSnapshot"
-                  @compare="onCompareSnapshots"
-                />
-
-                <!-- Snapshot preview iframe -->
-                <div v-if="previewSnapshot" class="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black">
-                  <div class="flex items-center justify-between border-b border-white/10 bg-white/[0.04] px-3 py-2 backdrop-blur">
-                    <span class="text-xs text-zinc-400">Preview: {{ formatSnapshotDate(previewSnapshot.timestamp) }}</span>
-                    <button type="button" class="eg-icon-btn h-6 w-6" aria-label="Close preview" @click="previewSnapshot = null">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-                    </button>
-                  </div>
-                  <div class="relative h-[500px] w-full">
-                    <iframe
-                      :src="previewReplayUrl"
-                      class="h-full w-full"
-                      sandbox="allow-same-origin allow-scripts"
-                      title="Wayback snapshot preview"
-                    />
-                  </div>
-                  <a
-                    :href="previewReplayUrl"
-                    target="_blank"
-                    rel="noopener"
-                    class="block border-t border-white/10 px-3 py-2 text-xs text-[var(--eg-accent)] transition hover:bg-white/5 hover:underline"
-                  >
-                    Open in new tab ↗
-                  </a>
-                </div>
-              </div>
-
-              <!-- Diff Tab -->
-              <div v-if="waybackTab === 'diff' && waybackSnapshots.length >= 2" class="mt-4">
-                <DiffViewer
-                  :snapshots="waybackSnapshots"
-                  :url="form.url || ''"
-                  @change="onDiffChange"
-                />
-              </div>
-            </section>
-          </div>
-        </form>
+          <SiteUpdatePreview
+            v-if="previewOpen"
+            class="flex-1 min-w-0 overflow-y-auto"
+            :form="form"
+            @hide-preview="previewOpen = false"
+          />
+        </div>
 
         <!-- Footer -->
         <footer class="eg-sheet-footer">
@@ -221,9 +70,11 @@
 import type { SiteUpdate, SiteUpdateDraft } from '~/lib/types'
 import { computed, reactive, ref, watch } from 'vue'
 import { useSupabaseAuth } from '~/composables/useSupabaseAuth'
-import type { WaybackSnapshot, WaybackDiff } from '~/composables/useWayback'
-import WaybackPicker from './WaybackPicker.vue'
-import DiffViewer from './DiffViewer.vue'
+import type { SiteUpdateForm } from './siteupdate-editor/types'
+import DetailsSection from './siteupdate-editor/DetailsSection.vue'
+import ContentSection from './siteupdate-editor/ContentSection.vue'
+import WaybackSection from './siteupdate-editor/WaybackSection.vue'
+import SiteUpdatePreview from './siteupdate-editor/SiteUpdatePreview.vue'
 
 const props = defineProps<{
   open: boolean
@@ -240,7 +91,7 @@ const emit = defineEmits<{
 const { phase } = useSupabaseAuth()
 const canEdit = computed(() => phase.value === 'manager')
 
-const form = reactive<SiteUpdateDraft & { published_at: string }>({
+const form = reactive<SiteUpdateForm>({
   id: '',
   title: '',
   slug: '',
@@ -254,17 +105,12 @@ const form = reactive<SiteUpdateDraft & { published_at: string }>({
 })
 
 const saving = ref(false)
+const previewOpen = ref(true)
+const resizing = ref(false)
+const paneContainer = ref<HTMLElement | null>(null)
+const paneWidth = ref(58)
 
-// Wayback state
-const waybackTab = ref<'snapshots' | 'diff'>('snapshots')
-const waybackSnapshots = ref<WaybackSnapshot[]>([])
-const currentDiff = ref<WaybackDiff | null>(null)
-const previewSnapshot = ref<WaybackSnapshot | null>(null)
-
-const previewReplayUrl = computed(() => {
-  if (!previewSnapshot.value || !form.url) return ''
-  return `https://web.archive.org/web/${previewSnapshot.value.timestamp}/${form.url}`
-})
+const dividerStyle = computed(() => ({ '--pane-width': `${paneWidth.value}%` }))
 
 function close() {
   emit('update:open', false)
@@ -290,45 +136,6 @@ function resetForm() {
   form.wayback_url = u?.wayback_url ?? ''
   form.snapshot_timestamps = u?.snapshot_timestamps ? [...u.snapshot_timestamps] : []
   form.last_diff = u?.last_diff ?? ''
-  
-  // Reset Wayback state
-  waybackSnapshots.value = []
-  currentDiff.value = null
-  previewSnapshot.value = null
-  waybackTab.value = 'snapshots'
-}
-
-function onSnapshotsLoaded(snapshots: WaybackSnapshot[]) {
-  waybackSnapshots.value = snapshots
-  form.snapshot_timestamps = snapshots.map(s => s.timestamp)
-}
-
-function onSelectSnapshot(snap: WaybackSnapshot) {
-  previewSnapshot.value = snap
-  waybackTab.value = 'snapshots'
-}
-
-function onCompareSnapshots(snapshots: WaybackSnapshot[]) {
-  waybackSnapshots.value = snapshots
-  waybackTab.value = 'diff'
-}
-
-function onDiffChange(from: WaybackSnapshot, to: WaybackSnapshot) {
-  // Store diff info in the form
-  const diffInfo = {
-    from: from.timestamp,
-    to: to.timestamp,
-    url: form.url,
-  }
-  form.last_diff = JSON.stringify(diffInfo)
-}
-
-function formatSnapshotDate(timestamp: string): string {
-  if (!timestamp) return ''
-  const year = timestamp.slice(0, 4)
-  const month = timestamp.slice(4, 6)
-  const day = timestamp.slice(6, 8)
-  return `${year}-${month}-${day}`
 }
 
 async function handleSubmit() {
@@ -352,7 +159,6 @@ async function handleSubmit() {
 
   saving.value = true
   emit('save', draft)
-  // Do not close here: the parent closes the modal after the save promise resolves
 }
 
 async function handleDelete() {
@@ -361,5 +167,30 @@ async function handleDelete() {
     emit('delete', props.siteUpdate.id)
     close()
   }
+}
+
+/* ——— resizable form / preview divider (desktop) ——— */
+
+function startResize(event: MouseEvent) {
+  if (event.button !== 0) return
+  resizing.value = true
+  const startX = event.clientX
+  const startWidth = paneWidth.value
+
+  const onMove = (move: MouseEvent) => {
+    const rect = paneContainer.value?.getBoundingClientRect()
+    const width = rect?.width || 1
+    let pct = startWidth + ((move.clientX - startX) / width) * 100
+    paneWidth.value = Math.min(80, Math.max(20, pct))
+  }
+
+  const onUp = () => {
+    resizing.value = false
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp, { once: true })
 }
 </script>

@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-3" @contextmenu.prevent="onPanelContext">
-    <div class="flex items-center justify-between gap-2">
+    <div v-if="!hideHeader" class="flex items-center justify-between gap-2">
       <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
         {{ dayTitle }} <span class="ml-1 text-[11px] font-normal text-zinc-600">{{ itemCount }} item{{ itemCount === 1 ? '' : 's' }}</span>
       </h2>
@@ -146,6 +146,8 @@ const props = defineProps<{
   day: string
   items: CalendarItem[]
   topics: readonly Topic[]
+  /** Hide the day title + Create row (used inside the mobile sheet which already shows them). */
+  hideHeader?: boolean
 }>()
 
 const emit = defineEmits<{

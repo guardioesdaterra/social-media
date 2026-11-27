@@ -32,7 +32,7 @@
         <div class="flex items-center gap-2 shrink-0 min-w-0">
           <div class="flex flex-col items-start gap-1 shrink-0 min-w-0">
             <label class="text-[11px] text-zinc-500 shrink-0">View</label>
-            <div class="eg-segmented whitespace-nowrap overflow-x-auto sm:whitespace-normal sm:overflow-visible">
+            <div class="eg-segmented flex-wrap whitespace-normal sm:flex-nowrap sm:whitespace-nowrap sm:overflow-x-auto">
               <button
                 class="eg-segmented-item"
                 :class="{ 'is-active': view === 'month' }"
@@ -59,7 +59,7 @@
 
           <div class="flex flex-col items-start gap-1 shrink-0 min-w-0">
             <span class="text-[10px] text-zinc-500 shrink-0">Filter</span>
-            <div class="eg-segmented whitespace-nowrap overflow-x-auto sm:whitespace-normal sm:overflow-visible">
+            <div class="eg-segmented flex-wrap whitespace-normal sm:flex-nowrap sm:whitespace-nowrap sm:overflow-x-auto">
               <button
                 class="eg-segmented-item"
                 :class="{ 'is-active': filter === 'all' }"
@@ -244,6 +244,7 @@
                 :day="cursor"
                 :items="dayItems"
                 :topics="topics"
+                hide-header
                 @create="onCreate($event)"
                 @edit-item="openItemEditor"
                 @delete="deletePost"
@@ -283,6 +284,20 @@
         @delete="deleteSiteUpdate"
         @cancel="siteUpdateEditorOpen = false"
       />
+
+      <!-- Pending posts bottom bar (approve / decline / comment + undo/redo) -->
+      <PendingPostsBottom
+        :posts="pendingPosts"
+        :open="pendingPostsOpen"
+        :can-undo="!!history.canUndo.value"
+        :can-redo="!!history.canRedo.value"
+        @close="pendingPostsOpen = false"
+        @approve="approvePost"
+        @decline="declinePost"
+        @comment="commentOnPost"
+        @undo="history.undo"
+        @redo="history.redo"
+      />
     </div>
   </AuthGate>
 </template>
@@ -291,7 +306,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useWindowSize, useDocumentVisibility } from '@vueuse/core'
 import { parseIsoDay, todayIso, weekOf, monthLabel, daysInMonth, dayLabel } from '~/lib/calendar'
-import type { CalendarItem, CalendarPost, CalendarItemKind } from '~/lib/types'
+import type { CalendarItem, CalendarPost, CalendarItemKind, PostDraft } from '~/lib/types'
 import { makeCalendarItem } from '~/lib/types'
 
 import AuthGate from '~/components/AuthGate.vue'
@@ -304,6 +319,9 @@ import CreateMenu from '~/components/CreateMenu.vue'
 import PostEditor from '~/components/PostEditor.vue'
 import NewsletterEditor from '~/components/NewsletterEditor.vue'
 import SiteUpdateEditor from '~/components/SiteUpdateEditor.vue'
+import PendingPostsBottom from '~/components/PendingPostsBottom.vue'
+import { useHistory } from '~/composables/useHistory'
+import { useComments } from '~/composables/useComments'
 
 const { width } = useWindowSize()
 const isDesktop = computed(() => width.value >= 1024)
@@ -313,6 +331,14 @@ const newsletters = useNewsletters()
 const siteUpdates = useSiteUpdates()
 const auth = useSupabaseAuth()
 const toast = useToast()
+const history = useHistory()
+const { openDrawer } = useComments()
+
+const pendingPostsOpen = ref(false)
+
+const pendingPosts = computed(() =>
+  posts.value.filter((p) => p.status === 'planned' || p.status === 'production'),
+)
 
 const {
   topics,
@@ -712,11 +738,54 @@ async function saveSiteUpdate(draft: any) {
 
 async function deleteSiteUpdate(id: string) {
   try {
-    await deleteSiteUpdateStore(id)
+    await deleteSiteUpdate(id)
     toast.success('Site update deleted.')
   } catch (err: any) {
     toast.error(err?.message || 'Could not delete site update.')
   }
+}
+
+/** Atomic approve/decline commands for pending posts (undo/redo safe). */
+function approvePost(post: CalendarPost) {
+  if (post.status === 'approved') return
+  const prev = post.status
+  const next = 'approved' as const
+  const draft = { ...post, status: next } as PostDraft
+  history.run({
+    id: `approve_${post.id}`,
+    label: `Approve "${post.title || post.id}"`,
+    execute: () => void calendar.save({ action: 'upsert_post', post: draft }),
+    undo: () =>
+      void calendar.save({ action: 'upsert_post', post: { ...post, status: prev } as PostDraft }),
+    redo: () => void calendar.save({ action: 'upsert_post', post: draft }),
+  })
+  toast.success(`Approved "${post.title || post.id}".`)
+}
+
+function declinePost(post: CalendarPost) {
+  if (post.status === 'planned') return
+  const prev = post.status
+  const next = 'planned' as const
+  const draft = { ...post, status: next } as PostDraft
+  history.run({
+    id: `decline_${post.id}`,
+    label: `Return to planned "${post.title || post.id}"`,
+    execute: () => void calendar.save({ action: 'upsert_post', post: draft }),
+    undo: () =>
+      void calendar.save({ action: 'upsert_post', post: { ...post, status: prev } as PostDraft }),
+    redo: () => void calendar.save({ action: 'upsert_post', post: draft }),
+  })
+  toast.info(`Returned "${post.title || post.id}" to planned.`)
+}
+
+function commentOnPost(post: CalendarPost) {
+  pendingPostsOpen.value = false
+  openDrawer({
+    type: 'post',
+    id: post.id,
+    path: 'caption',
+    label: `Comments · ${post.title || '(no title)'}`,
+  })
 }
 
 async function loadAll(force = false) {

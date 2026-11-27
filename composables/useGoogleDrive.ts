@@ -87,6 +87,12 @@ function clearTokenCache(): void {
   }
 }
 
+/** Drop any locally cached Google token so the next call starts fully fresh. */
+export function clearConnection(): void {
+  clearTokenCache()
+  tokenRequest = null
+}
+
 export interface DriveFile {
   id: string
   name: string
@@ -277,6 +283,19 @@ export function useGoogleDrive() {
     return apiFetch<DriveFile>(`/files/${fileId}?${params.toString()}`)
   }
 
+  /** Base64-encode an ArrayBuffer without spreading the whole buffer into
+   *  function arguments (which throws "Maximum call stack size exceeded" for
+   *  multi-megabyte images/videos). Encodes in small chunks instead. */
+  function arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer)
+    const CHUNK = 8192
+    const parts: string[] = []
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      parts.push(String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK))))
+    }
+    return btoa(parts.join(''))
+  }
+
   async function downloadFile(
     fileId: string,
     mimeType: string,
@@ -303,8 +322,7 @@ export function useGoogleDrive() {
     }
 
     const arrayBuffer = await res.arrayBuffer()
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
-    return `data:${mimeType};base64,${base64}`
+    return `data:${mimeType};base64,${arrayBufferToBase64(arrayBuffer)}`
   }
 
   async function fetchFolderMedia(
@@ -433,6 +451,7 @@ export function useGoogleDrive() {
     downloadFiles,
     searchFiles,
     getAccessToken: getLocalToken,
+    clearConnection,
     isDownloadableMedia,
     isWorkspaceFile,
   }

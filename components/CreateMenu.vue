@@ -14,7 +14,8 @@
     <Transition name="menu">
       <div
         v-if="open"
-        class="absolute right-0 mt-2 w-60 overflow-hidden rounded-2xl z-50"
+        class="absolute mt-2 w-60 overflow-hidden rounded-2xl z-50 max-w-[92vw]"
+        :class="isSmall ? 'left-1/2 -translate-x-1/2' : 'right-0'"
         style="
           background: rgba(20, 20, 22, 0.72);
           backdrop-filter: blur(32px) saturate(160%);
@@ -71,6 +72,8 @@
 
 <script setup lang="ts">
 import type { CalendarItemKind } from '~/lib/types'
+import { computed } from 'vue'
+import { useWindowSize } from '@vueuse/core'
 
 const props = defineProps<{
   day: string
@@ -81,6 +84,9 @@ const emit = defineEmits<{
 }>()
 
 const open = defineModel<boolean>()
+
+const { width } = useWindowSize()
+const isSmall = computed(() => width.value < 640)
 
 const items: { kind: CalendarItemKind; emoji: string; label: string; hint: string }[] = [
   { kind: 'post', emoji: '📝', label: 'Post', hint: 'Social post' },

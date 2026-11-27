@@ -3,7 +3,7 @@
     <img
       src="/EG-Logo.webp"
       alt="Earth Guardians"
-      class="h-14 w-14 shrink-0 rounded-2xl object-contain"
+      class="h-12 w-12 sm:h-16 sm:w-16 shrink-0 rounded-2xl object-contain"
       aria-hidden="true"
     />
     <h1 class="mt-5 text-2xl font-semibold text-white">Social Media</h1>
