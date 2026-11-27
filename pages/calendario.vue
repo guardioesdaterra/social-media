@@ -29,35 +29,37 @@
           {{ pageTitle }}
         </h1>
 
-        <div class="flex items-center gap-2">
-          <label class="text-[11px] text-zinc-500 shrink-0">View</label>
-          <div class="eg-segmented">
-            <button
-              class="eg-segmented-item"
-              :class="{ 'is-active': view === 'month' }"
-              @click="view = 'month'"
-            >
-              Month
-            </button>
-            <button
-              class="eg-segmented-item"
-              :class="{ 'is-active': view === 'week' }"
-              @click="view = 'week'"
-            >
-              Week
-            </button>
-            <button
-              class="eg-segmented-item"
-              :class="{ 'is-active': view === 'list' }"
-              @click="view = 'list'"
-            >
-              List
-            </button>
+        <div class="flex items-center gap-2 shrink-0 min-w-0">
+          <div class="flex flex-col items-start gap-1 shrink-0 min-w-0">
+            <label class="text-[11px] text-zinc-500 shrink-0">View</label>
+            <div class="eg-segmented whitespace-nowrap overflow-x-auto sm:whitespace-normal sm:overflow-visible">
+              <button
+                class="eg-segmented-item"
+                :class="{ 'is-active': view === 'month' }"
+                @click="view = 'month'"
+              >
+                Month
+              </button>
+              <button
+                class="eg-segmented-item"
+                :class="{ 'is-active': view === 'week' }"
+                @click="view = 'week'"
+              >
+                Week
+              </button>
+              <button
+                class="eg-segmented-item"
+                :class="{ 'is-active': view === 'list' }"
+                @click="view = 'list'"
+              >
+                List
+              </button>
+            </div>
           </div>
 
-          <div class="flex items-center gap-1">
+          <div class="flex flex-col items-start gap-1 shrink-0 min-w-0">
             <span class="text-[10px] text-zinc-500 shrink-0">Filter</span>
-            <div class="eg-segmented">
+            <div class="eg-segmented whitespace-nowrap overflow-x-auto sm:whitespace-normal sm:overflow-visible">
               <button
                 class="eg-segmented-item"
                 :class="{ 'is-active': filter === 'all' }"
@@ -201,15 +203,27 @@
 
         <!-- Mobile bottom sheet -->
         <div
-          v-if="!isDesktop && showSheet"
-          class="fixed inset-x-0 bottom-0 z-40 flex flex-col"
+          v-show="!isDesktop && showSheet"
+          class="fixed inset-x-0 bottom-0 z-40 flex items-end flex-col pointer-events-none transition-opacity duration-300 ease-out"
           @click.self="closeSheet"
+          :class="{ 'opacity-100 pointer-events-auto': showSheet, 'opacity-0': !showSheet }"
         >
-          <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
           <div
-            class="relative z-10 flex h-[55vh] flex-col bg-[var(--eg-panel)] border-t border-[var(--eg-border)] shadow-2xl"
+            class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-out"
+            :class="{ 'opacity-100': showSheet, 'opacity-0': !showSheet }"
+          />
+          <div
+            class="relative z-10 w-full flex-col bg-[var(--eg-panel)] border-t border-[var(--eg-border)] shadow-2xl rounded-t-2xl mb-4 max-h-[85vh] transition-transform duration-300 ease-out"
+            :class="{
+              'translate-y-0': showSheet,
+              'translate-y-full': !showSheet,
+            }"
           >
-            <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-[var(--eg-border)]">
+            <!-- Sheet grab handle -->
+            <div class="flex justify-center px-4 py-2 shrink-0">
+              <div class="w-8 h-1 rounded-full bg-zinc-700" />
+            </div>
+            <div class="flex items-center justify-between gap-2 px-4 py-2 border-b border-[var(--eg-border)] shrink-0">
               <button
                 class="eg-btn-ghost !px-2 !py-1.5 text-xs shrink-0"
                 aria-label="Close"
@@ -217,13 +231,20 @@
               >
                 ✕
               </button>
+              <h2 class="flex-1 text-sm font-semibold text-white truncate">
+                {{ dayTitle }} <span class="ml-1 text-[11px] font-normal text-zinc-500">{{ dayItems.length }} item{{ dayItems.length === 1 ? '' : 's' }}</span>
+              </h2>
+              <CreateMenu :day="cursor" @create="onCreate($event)" class="shrink-0" />
             </div>
-            <div class="flex-1 overflow-y-auto p-3">
+            <div
+              class="flex-1 overflow-y-auto p-3"
+              style="-webkit-overflow-scrolling: touch; overscroll-behavior: contain;"
+            >
               <DayPanel
                 :day="cursor"
                 :items="dayItems"
                 :topics="topics"
-                @create="onCreate"
+                @create="onCreate($event)"
                 @edit-item="openItemEditor"
                 @delete="deletePost"
                 @save="savePost"
@@ -268,8 +289,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useWindowSize } from '@vueuse/core'
-import { parseIsoDay, todayIso, weekOf, monthLabel, daysInMonth } from '~/lib/calendar'
+import { useWindowSize, useDocumentVisibility } from '@vueuse/core'
+import { parseIsoDay, todayIso, weekOf, monthLabel, daysInMonth, dayLabel } from '~/lib/calendar'
 import type { CalendarItem, CalendarPost, CalendarItemKind } from '~/lib/types'
 import { makeCalendarItem } from '~/lib/types'
 
@@ -303,6 +324,7 @@ const {
   save,
   deletePost,
   connectRealtime: connectCalendarRealtime,
+  ensureRealtime: ensureCalendarRealtime,
   init: initCalendar,
 } = calendar
 
@@ -313,6 +335,7 @@ const {
   save: saveNewsletterStore,
   deleteNewsletter: deleteNewsletterStore,
   connectRealtime: connectNlRealtime,
+  ensureRealtime: ensureNlRealtime,
   init: initNewsletters,
 } = newsletters
 
@@ -323,6 +346,7 @@ const {
   save: saveSiteUpdateStore,
   deleteSiteUpdate: deleteSiteUpdateStore,
   connectRealtime: connectSuRealtime,
+  ensureRealtime: ensureSuRealtime,
   init: initSiteUpdates,
 } = siteUpdates
 
@@ -330,11 +354,72 @@ const { manager } = auth
 const isManager = computed(() => auth.phase.value === 'manager')
 
 // ---- cursor / view state ----
-const cursor = ref(todayIso())
-const view = ref<'month' | 'week' | 'list'>('month')
+//
+// Persisted in sessionStorage so a tab switch that makes the browser discard
+// (or reload) this tab restores exactly where the user left it — same view,
+// same filter, same selected day — instead of snapping back to an empty
+// "today".
+const UI_STATE_KEY = 'eg:calendar-ui'
+const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/
+
+interface CalendarUiState {
+  cursor?: unknown
+  view?: unknown
+  filter?: unknown
+  panelMode?: unknown
+}
+
+function readUiState(): CalendarUiState {
+  if (!import.meta.client) return {}
+  try {
+    const raw = sessionStorage.getItem(UI_STATE_KEY)
+    const parsed = raw ? JSON.parse(raw) : null
+    return parsed && typeof parsed === 'object' ? (parsed as CalendarUiState) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeUiState() {
+  if (!import.meta.client) return
+  try {
+    sessionStorage.setItem(
+      UI_STATE_KEY,
+      JSON.stringify({
+        cursor: cursor.value,
+        view: view.value,
+        filter: filter.value,
+        panelMode: panelMode.value,
+      }),
+    )
+  } catch {
+    // storage unavailable — state simply won't survive a reload
+  }
+}
+
+const uiState = readUiState()
+
+const cursor = ref(
+  typeof uiState.cursor === 'string' && ISO_DAY_RE.test(uiState.cursor) ? uiState.cursor : todayIso(),
+)
+const view = ref<'month' | 'week' | 'list'>(
+  uiState.view === 'week' || uiState.view === 'list' ? uiState.view : 'month',
+)
 const showSheet = ref(false)
-const panelMode = ref<'day' | 'topics'>('day')
-const filter = ref<'all' | 'posts' | 'newsletters' | 'site_updates'>('all')
+
+watch(showSheet, (open) => {
+  document.documentElement.style.overflow = open ? 'hidden' : ''
+  document.body.style.overflow = open ? 'hidden' : ''
+})
+const panelMode = ref<'day' | 'topics'>(uiState.panelMode === 'topics' ? 'topics' : 'day')
+const filter = ref<'all' | 'posts' | 'newsletters' | 'site_updates'>(
+  uiState.filter === 'posts' || uiState.filter === 'newsletters' || uiState.filter === 'site_updates'
+    ? uiState.filter
+    : 'all',
+)
+
+// Keep the persisted view in sync with every navigation/filter change.
+watch([cursor, view, filter, panelMode], writeUiState)
 
 // editors
 const editorOpen = ref(false)
@@ -349,6 +434,8 @@ const createOpen = ref(false)
 
 const cursorYear = computed(() => parseIsoDay(cursor.value).year)
 const cursorMonth = computed(() => parseIsoDay(cursor.value).month)
+
+const dayTitle = computed(() => dayLabel(cursor.value))
 
 const weekDays = computed(() => weekOf(cursor.value))
 
@@ -661,4 +748,31 @@ watch(
     if (phase === 'manager') void initApp()
   },
 )
+
+// ---- returning to the tab: resync + keep the realtime feed alive ----
+const visibility = useDocumentVisibility()
+let lastResyncAt = 0
+
+/**
+ * Runs when the user comes back to this tab: force-refreshes the three
+ * snapshots (anything that changed while the tab was hidden / frozen) and
+ * re-attaches realtime channels that dropped in the meantime. The selected
+ * day and view are untouched — they live in `cursor`/`view` and are persisted
+ * above, so the panel still shows the day the user had selected.
+ */
+async function resyncOnVisible() {
+  if (!import.meta.client || visibility.value !== 'visible' || !isManager.value) return
+  const now = Date.now()
+  if (now - lastResyncAt < 4000) return // debounce rapid visibility flips
+  lastResyncAt = now
+
+  await loadAll(true)
+  ensureCalendarRealtime()
+  ensureNlRealtime()
+  ensureSuRealtime()
+}
+
+watch(visibility, (state) => {
+  if (state === 'visible') void resyncOnVisible()
+})
 </script>

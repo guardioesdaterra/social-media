@@ -15,8 +15,11 @@
       <div
         v-for="item in items"
         :key="item.id"
-        class="eg-card p-3 relative group cursor-move rounded-2xl eg-card-hover"
-        :style="{ opacity: dragSource?.id === item.id ? 0.4 : 1 }"
+        class="eg-card p-3 relative group cursor-move rounded-2xl eg-card-hover border-l-4 border-transparent pl-[calc(1rem-0.25rem)] transition hover:border-l-[var(--eg-accent-glow)]"
+        :style="{
+          borderLeftColor: itemColor(item),
+          opacity: dragSource?.id === item.id ? 0.4 : 1,
+        }"
         draggable="true"
         @dragstart="onItemDragStart($event, item)"
         @dragend="onItemDragEnd"
@@ -25,10 +28,10 @@
         @drop="onItemDrop($event, item)"
         :class="{ 'ring-1 ring-[var(--eg-accent)]': dragOver === item.id }"
       >
-        <div class="flex items-start gap-2">
+        <div class="flex items-start gap-2.5">
           <span
-            class="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold"
-            :style="{ background: itemColor(item) + '20', color: itemColor(item) }"
+            class="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-xl text-[11px] font-bold"
+            :style="{ background: itemColor(item) + '12', color: itemColor(item) }"
           >
             {{ item.kind === 'post' ? topicEmoji(item.post.topic_key) : kindIcon(item.kind) }}
           </span>
@@ -36,12 +39,12 @@
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1.5 mb-1">
               <span
-                class="inline-flex items-center rounded px-1 py-0 text-[9px] font-medium leading-none"
+                class="inline-flex items-center rounded px-1.5 py-0 text-[9px] font-medium leading-none"
                 :style="{ background: itemColor(item) + '15', color: itemColor(item) }"
               >
                 {{ itemKindLabel(item.kind) }}
               </span>
-              <span v-if="item.status" class="inline-flex items-center rounded px-1 py-0 text-[9px] font-medium leading-none" :style="{ background: statusColor(item.status) + '15', color: statusColor(item.status) }">
+              <span v-if="item.status" class="inline-flex items-center rounded px-1.5 py-0 text-[9px] font-medium leading-none" :style="{ background: statusColor(item.status) + '15', color: statusColor(item.status) }">
                 {{ itemStatusLabel(item.status) }}
               </span>
               <span v-if="item.time" class="ml-auto text-[10px] text-zinc-500 truncate max-w-[30%]">{{ item.time.slice(11, 16) }}</span>

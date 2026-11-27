@@ -74,6 +74,9 @@ function main() {
     'site-update-save',
     'wayback-capture',
     'wayback-cdx',
+    // Google Drive picker: persist + serve (refresh) the manager's Google tokens.
+    'store-provider-token',
+    'google-token',
   ]
   for (const name of functions) {
     console.log(`[deploy-supabase] Deploying edge function: ${name}`)

@@ -100,8 +100,16 @@
             <div class="max-w-xs text-center">
               <svg class="mx-auto mb-3 text-zinc-600" width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
               <p class="text-sm font-medium text-zinc-200">Google Drive isn’t connected</p>
-              <p class="mt-1 text-xs text-zinc-500">Sign in with Google to browse and pick your files.</p>
-              <button type="button" class="eg-btn-apple-secondary mt-4 text-xs" @click="initialize">Check again</button>
+              <p class="mt-1 text-xs text-zinc-500">
+                {{ isSignedIn ? 'Grant access once and your files stay available in the picker.' : 'Sign in with Google to browse and pick your files.' }}
+              </p>
+              <button
+                type="button"
+                class="eg-btn-apple-primary mt-4 text-xs"
+                :disabled="connecting"
+                @click="connectGoogle"
+              >{{ connecting ? 'Opening Google…' : 'Connect Google Drive' }}</button>
+              <button v-if="isSignedIn" type="button" class="eg-btn-apple-secondary mt-2 text-xs" :disabled="connecting" @click="initialize">Check again</button>
             </div>
           </div>
 
@@ -288,7 +296,7 @@
 
 <script setup lang="ts">
 import type { DriveFile } from '~/composables/useGoogleDrive'
-import { useGoogleDrive } from '~/composables/useGoogleDrive'
+import { useGoogleDrive, GoogleNotConnectedError } from '~/composables/useGoogleDrive'
 import { useToast } from '~/composables/useToast'
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
@@ -303,7 +311,19 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const { loading, hasToken, listFiles, fetchFolderMedia, downloadFiles, searchFiles, isDownloadableMedia } = useGoogleDrive()
+const {
+  loading,
+  hasToken,
+  isSignedIn,
+  ensureAccessToken,
+  listFiles,
+  fetchFolderMedia,
+  downloadFiles,
+  searchFiles,
+  isDownloadableMedia,
+} = useGoogleDrive()
+const { signInWithGoogle } = useSupabaseAuth()
+const { signInWithPopup } = usePopupAuth()
 const toast = useToast()
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder'
@@ -323,6 +343,7 @@ const busy = ref(false)
 const loadingMore = ref(false)
 const errorMessage = ref<string | null>(null)
 const showSignIn = ref(false)
+const connecting = ref(false)
 const nextPageToken = ref<string | null>(null)
 const activeIndex = ref(0)
 const modalRoot = ref<HTMLElement | null>(null)
@@ -476,7 +497,7 @@ function cancelSearchTimer() {
 function fail(err: unknown, retry: () => void) {
   const message = err instanceof Error ? err.message : 'Something went wrong while loading files.'
   retryAction = retry
-  if (/token/i.test(message)) {
+  if (err instanceof GoogleNotConnectedError || /token|not[_ ]connected/i.test(message)) {
     errorMessage.value = null
     showSignIn.value = true
   } else {
@@ -490,10 +511,10 @@ function retry() {
   action?.()
 }
 
-function initialize() {
+async function initialize() {
+  const seq = ++requestSeq
   cancelSearchTimer()
   abortActiveDownload()
-  requestSeq++
   busy.value = false
   loadingMore.value = false
   files.value = []
@@ -511,8 +532,84 @@ function initialize() {
   // Focus must enter the dialog in every state (incl. signed-out), otherwise
   // Escape and the focus trap never see keyboard events.
   nextTick(() => searchInput.value?.focus())
-  if (!hasToken.value) { showSignIn.value = true; return }
+
+  if (!isSignedIn.value) {
+    showSignIn.value = true
+    return
+  }
+
+  // Resolve a Google access token before listing anything: local cache →
+  // `google-token` edge function (stored/refreshed) → "Connect Google Drive".
+  busy.value = true
+  loadMessage.value = 'Connecting to Google Drive…'
+  let token: string | null
+  try {
+    token = await ensureAccessToken()
+  } catch (err) {
+    if (seq !== requestSeq) return
+    busy.value = false
+    fail(err, () => { void initialize() })
+    return
+  }
+  if (seq !== requestSeq) return
+  busy.value = false
+  if (!token) {
+    showSignIn.value = true
+    return
+  }
+
   void loadFolder('root', 'My Drive')
+}
+
+function showConnectError(message: string) {
+  showSignIn.value = false
+  errorMessage.value = message
+  retryAction = () => { void connectGoogle() }
+}
+
+/**
+ * Runs the Google OAuth flow so Drive gets its own (refreshable) token:
+ * popup when the app is embedded in an iframe (SquareSpace blocks the
+ * redirect), plain redirect otherwise. The sign-in callback stores the
+ * provider tokens server-side, which is what `ensureAccessToken` reads back.
+ */
+async function connectGoogle() {
+  if (connecting.value) return
+  connecting.value = true
+  errorMessage.value = null
+  retryAction = null
+  try {
+    let embedded = false
+    try {
+      embedded = window.self !== window.top
+    } catch {
+      embedded = true
+    }
+
+    if (embedded) {
+      const result = await signInWithPopup()
+      if (!result.success) {
+        if (result.error && result.error !== 'Authentication popup closed') {
+          showConnectError(result.error)
+        } else {
+          showSignIn.value = true
+        }
+        return
+      }
+    } else {
+      const err = await signInWithGoogle()
+      if (err) {
+        showConnectError(err)
+        return
+      }
+      // Full-page OAuth redirect — coming back re-runs initialize().
+      return
+    }
+
+    await initialize()
+  } finally {
+    connecting.value = false
+  }
 }
 
 async function loadFolder(folderId: string, folderName: string) {

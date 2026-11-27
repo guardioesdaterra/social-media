@@ -205,6 +205,17 @@ export function useSiteUpdates() {
     }
   }
 
+  /** Re-attach the realtime channel after a drop (e.g. background tab). */
+  function ensureRealtime(): void {
+    if (mock || !import.meta.client) return
+    if (channel && realtimeStatus.value !== 'offline') return
+    if (channel) {
+      void supabase.removeChannel(channel)
+      channel = null
+    }
+    connectRealtime()
+  }
+
   async function init(): Promise<void> {
     const auth = useSupabaseAuth()
     await auth.bootstrap()
@@ -229,6 +240,7 @@ export function useSiteUpdates() {
     saveSiteUpdate,
     deleteSiteUpdate,
     connectRealtime,
+    ensureRealtime,
     init,
     session,
   }

@@ -295,6 +295,20 @@ export function useCalendar() {
     }
   }
 
+  /**
+   * Re-attach the realtime channel when it dropped (tab hidden for a long
+   * time, socket closed by the network…). No-op while the channel is healthy.
+   */
+  function ensureRealtime(): void {
+    if (mock || !import.meta.client) return
+    if (channel && realtimeStatus.value !== 'offline') return
+    if (channel) {
+      void supabase.removeChannel(channel)
+      channel = null
+    }
+    connectRealtime()
+  }
+
   /** Boot: auth → load snapshot → realtime. */
   async function init(): Promise<void> {
     const auth = useSupabaseAuth()
@@ -336,6 +350,7 @@ export function useCalendar() {
     setAttention,
     saveSetting,
     connectRealtime,
+    ensureRealtime,
     init,
     session,
     moveItem,

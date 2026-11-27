@@ -25,7 +25,12 @@ export function useSupabaseAuth() {
   const mock = isMock()
 
   async function evaluateGate(): Promise<void> {
-    phase.value = 'checking'
+    // Re-verifying a session that already passed the gate must NOT flip the UI
+    // back to the loading shell: AuthGate unmounts the whole calendar app for
+    // `checking`, which throws away the selected day/view on every background
+    // auth event (token refresh, storage sync, tab restore…).
+    const wasManager = phase.value === 'manager'
+    if (!wasManager) phase.value = 'checking'
     authError.value = null
 
     const token = session.value?.access_token
@@ -54,6 +59,12 @@ export function useSupabaseAuth() {
       })
 
       if (!res.ok) {
+        // Transient failure of an already-granted session: keep the app alive
+        // rather than kicking a manager out to the "access restricted" screen.
+        if (wasManager) {
+          console.warn(`[auth] background gate re-check failed (HTTP ${res.status}); keeping session`)
+          return
+        }
         phase.value = 'denied'
         manager.value = null
         authError.value = `The access check rejected this session (HTTP ${res.status}).`
@@ -81,6 +92,11 @@ export function useSupabaseAuth() {
         authError.value = data.reason || `Access is restricted to ${MANAGER_DOMAIN} accounts.`
       }
     } catch (err) {
+      // Same principle as above: a network blip must not tear down a live app.
+      if (wasManager) {
+        console.warn('[auth] background gate re-check failed; keeping session', err)
+        return
+      }
       console.error('[auth] is-manager failed', err)
       phase.value = 'denied'
       manager.value = null
