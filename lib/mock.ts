@@ -328,6 +328,7 @@ export function useMockCalendar() {
           image_mime: post.image_mime ?? null,
           image_name: post.image_name ?? null,
           image_bytes: post.image_bytes ?? null,
+          image_slides: post.image_slides ?? null,
           video_base64: post.video_base64 ?? null,
           video_mime: post.video_mime ?? null,
           video_name: post.video_name ?? null,

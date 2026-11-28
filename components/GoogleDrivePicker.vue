@@ -3,7 +3,7 @@
     <div
       v-if="open"
       ref="modalRoot"
-      class="fixed inset-0 z-50 outline-none"
+      class="fixed inset-0 z-[60] outline-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby="gdp-title"

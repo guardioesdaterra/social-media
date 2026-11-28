@@ -14,6 +14,7 @@
           :value="form.topic_key"
           @change="form.topic_key = ($event.target as HTMLSelectElement).value"
           required
+          :disabled="readonly"
         >
           <option disabled value="">Select a topic</option>
           <option v-for="t in topics" :key="t.key" :value="t.key">{{ t.emoji }} {{ t.label }}</option>
@@ -22,13 +23,13 @@
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="space-y-2">
           <label class="eg-field-label" for="pe-format">Format</label>
-          <select id="pe-format" class="eg-select" v-model="form.format">
+          <select id="pe-format" class="eg-select" v-model="form.format" :disabled="readonly">
             <option v-for="f in FORMATS" :key="f" :value="f">{{ f }}</option>
           </select>
         </div>
         <div class="space-y-2">
           <label class="eg-field-label" for="pe-status">Status</label>
-          <select id="pe-status" class="eg-select" v-model="form.status">
+          <select id="pe-status" class="eg-select" v-model="form.status" :disabled="readonly">
             <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
           </select>
         </div>
@@ -42,8 +43,5 @@ import type { PostFormat, PostStatus, Topic } from '~/lib/types'
 import { FORMATS, STATUSES } from '~/lib/types'
 import type { PostForm } from './types'
 
-const props = defineProps<{ form: PostForm; topics: readonly Topic[] }>()
-
-const FORMATS_LIST = FORMATS as readonly PostFormat[]
-const STATUSES_LIST = STATUSES as readonly { value: PostStatus; label: string }[]
+const props = defineProps<{ form: PostForm; topics: readonly Topic[]; readonly?: boolean }>()
 </script>

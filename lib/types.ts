@@ -62,6 +62,8 @@ export interface CalendarPost {
   image_mime: string | null
   image_name: string | null
   image_bytes: number | null
+  /** Every slide of a Carousel post (data URLs, in order). Cover also lives in `image_base64`. */
+  image_slides?: readonly string[] | null
   /** Data URL (`data:video/mp4;base64,...`) stored in Postgres, not in S3. */
   video_base64: string | null
   video_mime: string | null
@@ -147,6 +149,7 @@ export interface PostDraft {
   image_mime?: string | null
   image_name?: string | null
   image_bytes?: number | null
+  image_slides?: readonly string[] | null
   video_base64?: string | null
   video_mime?: string | null
   video_name?: string | null

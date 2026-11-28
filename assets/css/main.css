@@ -434,3 +434,37 @@
   transform: scale(0.96) translateY(8px);
   opacity: 0;
 }
+
+/* Pending bottom sheet transitions */
+.pending-bottom-enter-active,
+.pending-bottom-leave-active {
+  transition: opacity 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.pending-bottom-enter-active .eg-sheet-enter,
+.pending-bottom-leave-active .eg-sheet-enter {
+  transition:
+    transform 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.pending-bottom-enter-from,
+.pending-bottom-leave-to {
+  opacity: 0;
+}
+
+.pending-bottom-enter-from .eg-sheet-enter,
+.pending-bottom-leave-to .eg-sheet-enter {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+/* Subtle pulse animation for live indicator */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}

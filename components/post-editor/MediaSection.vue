@@ -6,7 +6,7 @@
     </div>
     <p class="eg-section-sub">Full quality image or video, stored in Postgres.</p>
     <div class="mt-4 space-y-3">
-      <div class="eg-segmented mt-2" role="tablist" aria-label="Media source">
+      <div v-if="!readonly" class="eg-segmented mt-2" role="tablist" aria-label="Media source">
         <button
           type="button"
           role="tab"
@@ -41,15 +41,18 @@
       </div>
 
       <div v-if="mediaSource === 'local'" class="mt-2 space-y-3">
-        <label class="eg-dropzone">
+        <label v-if="!readonly" class="eg-dropzone">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500">
             <rect x="3" y="3" width="18" height="18" rx="3" />
             <circle cx="9" cy="9" r="1.6" />
             <path d="m21 15-4.2-4.2a2 2 0 0 0-2.8 0L4 21" />
           </svg>
-          <span class="text-sm font-medium text-zinc-300">Click to choose an image or video</span>
-          <span class="text-[11px] text-zinc-500">PNG, JPG or WebP (max 4 MB) · MP4 or MOV (max 100 MB) · replaces any existing media</span>
-          <input type="file" accept="image/*,video/*" class="sr-only" @change="onMedia" />
+          <span class="text-sm font-medium text-zinc-300">{{ isCarousel ? 'Click to choose images or a video' : 'Click to choose an image or video' }}</span>
+          <span class="text-[11px] text-zinc-500">
+            PNG, JPG or WebP (max 4 MB) · MP4 or MOV (max 100 MB) ·
+            {{ isCarousel ? `pick several images for the carousel (up to ${MAX_CAROUSEL_IMAGES})` : 'replaces any existing media' }}
+          </span>
+          <input type="file" accept="image/*,video/*" class="sr-only" :multiple="isCarousel" @change="onMedia" />
         </label>
       </div>
 
@@ -62,17 +65,21 @@
           </svg>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-white">Pick from Google Drive</p>
-            <p class="mt-0.5 text-xs text-zinc-400">Choose one file, several files — or a whole folder (every image and video inside it) when the format is Carousel.</p>
+            <p class="mt-0.5 text-xs text-zinc-400">
+              Choose one file, several files — or a whole folder.
+              <template v-if="isCarousel">A carousel keeps every image you pick (up to {{ MAX_CAROUSEL_IMAGES }}).</template>
+              <template v-else>Other formats keep a single media file.</template>
+            </p>
           </div>
         </div>
-        <button type="button" class="eg-btn-apple-secondary mt-3 w-full" @click="openGdrive">
+        <button v-if="!readonly" type="button" class="eg-btn-apple-secondary mt-3 w-full" @click="openGdrive">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" aria-hidden="true">
             <path d="M21 15V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v10" />
             <path d="M3 15v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V15" />
           </svg>
           Open Google Drive
         </button>
-        <p class="eg-hint">Files are downloaded from your Drive and stored with the post.</p>
+        <p v-if="!readonly" class="eg-hint">Files are downloaded from your Drive and stored with the post.</p>
       </div>
 
       <div v-if="media.preview" class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
@@ -87,12 +94,35 @@
             <p class="truncate text-xs font-medium text-zinc-200" :title="media.name || undefined">{{ media.name || `Current ${media.kind}` }}</p>
             <span v-if="media.origin" class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide" :class="media.origin === 'gdrive' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-zinc-400'">{{ media.origin === 'gdrive' ? 'Google Drive' : 'Upload' }}</span>
           </div>
-          <p class="mt-0.5 text-[11px] text-zinc-500">{{ media.kind === 'video' ? 'Video' : 'Image' }} · {{ formatBytes(media.bytes) }}</p>
+          <p class="mt-0.5 text-[11px] text-zinc-500">
+            {{ media.kind === 'video' ? 'Video' : 'Image' }} · {{ formatBytes(media.bytes) }}
+            <template v-if="media.slides.length > 1"> · {{ media.slides.length }} slides</template>
+          </p>
         </div>
-        <button type="button" class="eg-btn-apple-secondary rounded-lg px-3 py-1.5 text-xs" @click="onDownloadMedia">⤓ Download</button>
-        <button type="button" class="eg-icon-btn text-red-400" aria-label="Remove media" @click="onClearMedia">
+        <button v-if="!readonly" type="button" class="eg-btn-apple-secondary rounded-lg px-3 py-1.5 text-xs" @click="onDownloadMedia">⤓ Download</button>
+        <button v-if="!readonly" type="button" class="eg-icon-btn text-red-400" aria-label="Remove media" @click="onClearMedia">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
+      </div>
+
+      <!-- Every slide of the carousel: cover first, each one removable. -->
+      <div v-if="media.slides.length > 1" class="mt-2 flex gap-2 overflow-x-auto px-1 py-1.5" role="list" aria-label="Carousel slides">
+        <div v-for="(slide, i) in media.slides" :key="i" class="relative shrink-0" role="listitem">
+          <img :src="slide" :alt="`Slide ${i + 1}`" class="h-16 w-16 rounded-lg object-cover ring-1" :class="i === 0 ? 'ring-emerald-400' : 'ring-white/10'" />
+          <span
+            class="absolute inset-x-0 bottom-0 rounded-b-lg bg-black/65 px-1 text-center text-[8px] font-semibold uppercase tracking-wide"
+            :class="i === 0 ? 'text-emerald-300' : 'text-zinc-300'"
+          >{{ i === 0 ? 'Cover' : i + 1 }}</span>
+          <button
+            v-if="!readonly"
+            type="button"
+            class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-black/85 text-zinc-300 transition hover:text-white"
+            :aria-label="`Remove slide ${i + 1}`"
+            @click="onRemoveSlide(i)"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
       </div>
     </div>
   </section>
@@ -100,7 +130,9 @@
 
 <script setup lang="ts">
 import type { MediaSource, MediaState, PostForm } from './types'
+import { computed } from 'vue'
 import { formatBytes } from '~/lib/image'
+import { MAX_CAROUSEL_IMAGES } from '~/lib/constants'
 
 const props = defineProps<{
   form: PostForm
@@ -108,9 +140,13 @@ const props = defineProps<{
   media: MediaState
   onMedia: (event: Event) => void
   onClearMedia: () => void
+  onRemoveSlide: (index: number) => void
   onDownloadMedia: () => void
   openGdrive: () => void
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{ 'update:mediaSource': [source: MediaSource] }>()
+
+const isCarousel = computed(() => props.form.format === 'Carousel')
 </script>

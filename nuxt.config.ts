@@ -60,12 +60,10 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    preset: 'static',
     prerender: {
       crawlLinks: true,
       routes: ['/', '/login', '/calendario'],
     },
-    compressPublicAssets: true,
   },
 
   experimental: { appManifest: false },

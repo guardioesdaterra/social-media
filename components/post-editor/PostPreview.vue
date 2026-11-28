@@ -39,7 +39,16 @@
               <span class="text-[10px] font-medium text-white">{{ form.format }}</span>
             </div>
             <div v-if="form.format === 'Carousel'" class="absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 backdrop-blur-sm">
-              <span class="text-[10px] font-medium text-white">1/3</span>
+              <span class="text-[10px] font-medium text-white">1/{{ media.slides.length || 1 }}</span>
+            </div>
+            <div v-if="form.format === 'Carousel' && media.slides.length > 1" class="absolute bottom-3 right-3 flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 backdrop-blur-sm">
+              <span
+                v-for="i in media.slides.length"
+                :key="i"
+                class="h-1.5 w-1.5 rounded-full"
+                :class="i === 1 ? 'bg-white' : 'bg-white/40'"
+                aria-hidden="true"
+              />
             </div>
           </template>
           <template v-else>

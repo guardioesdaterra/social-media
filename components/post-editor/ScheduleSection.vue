@@ -15,17 +15,19 @@
           :value="form.day"
           @input="form.day = ($event.target as HTMLInputElement).value"
           required
+          :disabled="readonly"
         />
         <p class="eg-hint">All-day post when no time is set.</p>
       </div>
       <div class="space-y-2">
         <label class="eg-field-label" for="pe-time">Scheduled time</label>
-        <input
+        <
           id="pe-time"
           type="time"
           class="eg-field"
           :value="form.scheduled_at ?? ''"
           @input="form.scheduled_at = ($event.target as HTMLInputElement).value || null"
+          :disabled="readonly"
         />
         <p class="eg-hint">Leave blank for an all-day post.</p>
       </div>
@@ -36,5 +38,5 @@
 <script setup lang="ts">
 import type { PostForm } from './types'
 
-defineProps<{ form: PostForm }>()
+defineProps<{ form: PostForm; readonly?: boolean }>()
 </script>

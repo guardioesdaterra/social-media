@@ -16,6 +16,7 @@
           @input="form.title = ($event.target as HTMLInputElement).value"
           maxlength="300"
           placeholder="e.g. Giving Tuesday — matched donation"
+          :disabled="readonly"
         />
       </div>
       <div class="space-y-2">
@@ -33,6 +34,7 @@
           @input="form.caption = ($event.target as HTMLTextAreaElement).value"
           maxlength="10000"
           placeholder="Greetings EG Family! ..."
+          :disabled="readonly"
         ></textarea>
       </div>
       <div class="space-y-2">
@@ -44,6 +46,7 @@
           :value="form.hashtags"
           @input="form.hashtags = ($event.target as HTMLInputElement).value"
           placeholder="#EarthGuardians #ClimateAction"
+          :disabled="readonly"
         />
         <p class="eg-hint">Space-separated.</p>
       </div>
@@ -54,5 +57,5 @@
 <script setup lang="ts">
 import type { PostForm } from './types'
 
-defineProps<{ form: PostForm }>()
+defineProps<{ form: PostForm; readonly?: boolean }>()
 </script>

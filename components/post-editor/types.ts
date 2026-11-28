@@ -16,6 +16,8 @@ export interface PostForm {
   hashtags: string
   image_base64: string | null
   video_base64: string | null
+  /** Every slide of a Carousel post (data URLs, in order). The cover is the first entry. */
+  image_slides: string[]
 }
 
 export interface MediaState {
@@ -24,6 +26,8 @@ export interface MediaState {
   bytes: number
   name: string
   origin: 'local' | 'gdrive' | null
+  /** All selected images (data URLs, in order). Single-image posts keep one entry. */
+  slides: string[]
 }
 
 export type MediaSource = 'local' | 'gdrive'

@@ -271,6 +271,7 @@
         :post="editorPost"
         :topics="topics"
         :day="cursor"
+        :review-mode="editorReviewMode"
         @save="savePost"
         @delete="deletePost"
         @cancel="editorOpen = false"
@@ -304,6 +305,7 @@
         @approve="approvePost"
         @decline="declinePost"
         @comment="commentOnPost"
+        @view-edit="viewEditPost"
         @undo="history.undo"
         @redo="history.redo"
       />
@@ -459,6 +461,7 @@ watch([cursor, view, filter, panelMode], writeUiState)
 // editors
 const editorOpen = ref(false)
 const editorPost = ref<CalendarPost | null>(null)
+const editorReviewMode = ref(false)
 const newsletterEditorOpen = ref(false)
 const editorNewsletter = ref<import('~/lib/types').Newsletter | null>(null)
 const siteUpdateEditorOpen = ref(false)
@@ -559,6 +562,7 @@ function onNewPost(day: string) {
   cursor.value = day
   createKind.value = 'post'
   editorPost.value = null
+  editorReviewMode.value = false
   editorOpen.value = true
 }
 
@@ -588,6 +592,7 @@ function onViewMonth(day: string) {
 function openItemEditor(item: CalendarItem) {
   if (item.kind === 'post') {
     editorPost.value = item.post
+    editorReviewMode.value = false
     editorOpen.value = true
     return
   }
@@ -660,6 +665,7 @@ function onCreate(kind: CalendarItemKind) {
   createKind.value = kind
   if (kind === 'post') {
     editorPost.value = null
+    editorReviewMode.value = false
     editorOpen.value = true
   } else if (kind === 'newsletter') {
     editorNewsletter.value = null
@@ -675,6 +681,7 @@ async function savePost(draft: any) {
     await calendar.save({ action: 'upsert_post', post: draft })
     toast.success('Post saved.')
     editorOpen.value = false
+    editorReviewMode.value = false
   } catch (err: any) {
     toast.error(err?.message || 'Could not save post.')
   }
@@ -805,6 +812,13 @@ function commentOnPost(post: CalendarPost) {
     path: 'caption',
     label: `Comments · ${post.title || '(no title)'}`,
   })
+}
+
+function viewEditPost(post: CalendarPost) {
+  pendingPostsOpen.value = false
+  editorPost.value = post
+  editorReviewMode.value = true
+  editorOpen.value = true
 }
 
 async function loadAll(force = false) {

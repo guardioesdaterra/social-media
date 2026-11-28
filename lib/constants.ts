@@ -20,6 +20,9 @@ export const MAX_IMAGE_BYTES = 4 * 1024 * 1024
 /** Max size of one base64 video accepted by the server (100 MiB). */
 export const MAX_VIDEO_BYTES = 100 * 1024 * 1024
 
+/** Slides per carousel post (Instagram allows up to 10). */
+export const MAX_CAROUSEL_IMAGES = 10
+
 /** App name. */
 export const APP_NAME = 'Social Media'
 
