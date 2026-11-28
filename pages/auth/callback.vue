@@ -153,9 +153,10 @@ onMounted(async () => {
   }
 
   // Regular (non-popup) mode - redirect-based flow
+  const redirectTo = urlParams.get('next') || '/calendario'
   if (isManager.value) {
     await storeProviderToken()
-    await router.replace('/calendario')
+    await router.replace(redirectTo)
     return
   }
 
@@ -165,7 +166,7 @@ onMounted(async () => {
       ok.value = true
       message.value = 'Welcome! Opening the calendar…'
       await storeProviderToken()
-      await router.replace('/calendario')
+      await router.replace(redirectTo)
     } else {
       message.value = 'Sign-in could not be completed.'
     }

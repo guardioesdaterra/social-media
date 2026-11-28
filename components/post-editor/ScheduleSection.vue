@@ -21,7 +21,7 @@
       </div>
       <div class="space-y-2">
         <label class="eg-field-label" for="pe-time">Scheduled time</label>
-        <
+        <input
           id="pe-time"
           type="time"
           class="eg-field"
